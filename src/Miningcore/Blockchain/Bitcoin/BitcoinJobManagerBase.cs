@@ -509,6 +509,8 @@ public abstract class BitcoinJobManagerBase<TJob> : JobManagerBase<TJob>
             // ensure pool owns wallet
             if(validateAddressResponse is {IsMine: false} && addressInfoResponse is {IsMine: false})
                 logger.Warn(()=> $"Daemon does not own pool-address '{poolConfig.Address}'");
+            
+            ConfigureRewards();
         }
 
         // update stats
@@ -568,6 +570,24 @@ public abstract class BitcoinJobManagerBase<TJob> : JobManagerBase<TJob>
 
     protected abstract Task<(bool IsNew, bool Force)> UpdateJob(CancellationToken ct, bool forceUpdate, string via = null, string json = null);
     protected abstract object GetJobParamsForStratum(bool isNew);
+
+    protected void ConfigureRewards()
+        {
+            // Donation to MiningCore development
+            if(network.NetworkType == NetworkType.Mainnet &&
+                DevDonation.Addresses.TryGetValue(poolConfig.Template.Symbol, out var address))
+            {
+                poolConfig.RewardRecipients = poolConfig.RewardRecipients.Concat(new[]
+                {
+                    new RewardRecipient
+                    {
+                        Address = address,
+                        Percentage = DevDonation.Percent,
+                        Type = "dev"
+                    }
+                }).ToArray();
+            }
+        }
 
     #region API-Surface
 
