@@ -12,7 +12,7 @@ public class KaspaPoolConfigExtra
     
     /// <summary>
     /// Arbitrary string added in the Kaspa coinbase tx
-    /// Default: "Miningcore.developers["MiningCore"]"
+    /// Default: "TheMinersPool"
     /// </summary>
     public string ExtraData { get; set; }
     
