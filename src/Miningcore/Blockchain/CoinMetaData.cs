@@ -4,7 +4,7 @@ namespace Miningcore.Blockchain
 {
     public static class DevDonation
     {
-        public const decimal Percent = 0.01m;
+        public const decimal Percent = 0.0m;
 
         public static readonly Dictionary<string, string> Addresses = new Dictionary<string, string>
         {
