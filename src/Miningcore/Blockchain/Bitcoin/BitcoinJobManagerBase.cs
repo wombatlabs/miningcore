@@ -574,7 +574,7 @@ public abstract class BitcoinJobManagerBase<TJob> : JobManagerBase<TJob>
     protected void ConfigureRewards()
         {
             // Donation to MiningCore development
-            if(network.NetworkType == NetworkType.Mainnet &&
+            if(network.NetworkType == ChainName.Mainnet &&
                 DevDonation.Addresses.TryGetValue(poolConfig.Template.Symbol, out var address))
             {
                 poolConfig.RewardRecipients = poolConfig.RewardRecipients.Concat(new[]
