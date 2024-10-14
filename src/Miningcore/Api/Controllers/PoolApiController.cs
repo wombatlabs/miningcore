@@ -68,13 +68,17 @@ public class PoolApiController : ApiControllerBase
                 // enrich
                 result.TotalPaid = await cf.Run(con => statsRepo.GetTotalPoolPaymentsAsync(con, config.Id, ct));
                 result.TotalBlocks = await cf.Run(con => blocksRepo.GetPoolBlockCountAsync(con, config.Id, ct));
-                var lastBlockTime = await cf.Run(con => blocksRepo.GetLastPoolBlockTimeAsync(con, config.Id));
+                result.TotalConfirmedBlocks = await cf.Run(con => blocksRepo.GetTotalConfirmedBlocksAsync(con, config.Id, ct));
+                result.TotalPendingBlocks = await cf.Run(con => blocksRepo.GetTotalPendingBlocksAsync(con, config.Id, ct));
+                // get reward of the last confirmed block and set BlockReward
+                result.BlockReward = await cf.Run(con => blocksRepo.GetLastConfirmedBlockRewardAsync(con, config.Id, ct));
+                var lastBlockTime = await cf.Run(con => blocksRepo.GetLastPoolBlockTimeAsync(con, config.Id, ct));
                 result.LastPoolBlockTime = lastBlockTime;
 
                 if(lastBlockTime.HasValue)
                 {
                     var startTime = lastBlockTime.Value;
-                    var poolEffort = await cf.Run(con => shareRepo.GetEffortBetweenCreatedAsync(con, config.Id, pool.ShareMultiplier, startTime, clock.Now));
+                    var poolEffort = await cf.Run(con => shareRepo.GetEffortBetweenCreatedAsync(con, config.Id, pool.ShareMultiplier, startTime, clock.Now, ct));
                     if(poolEffort.HasValue)
                         result.PoolEffort = poolEffort.Value;
                 }
@@ -137,13 +141,17 @@ public class PoolApiController : ApiControllerBase
         // enrich
         response.Pool.TotalPaid = await cf.Run(con => statsRepo.GetTotalPoolPaymentsAsync(con, pool.Id, ct));
         response.Pool.TotalBlocks = await cf.Run(con => blocksRepo.GetPoolBlockCountAsync(con, pool.Id, ct));
-        var lastBlockTime = await cf.Run(con => blocksRepo.GetLastPoolBlockTimeAsync(con, pool.Id));
+        response.Pool.TotalConfirmedBlocks = await cf.Run(con => blocksRepo.GetTotalConfirmedBlocksAsync(con, pool.Id, ct));
+        response.Pool.TotalPendingBlocks = await cf.Run(con => blocksRepo.GetTotalPendingBlocksAsync(con, pool.Id, ct));
+        // get reward of the last confirmed block and set BlockReward
+        response.Pool.BlockReward = await cf.Run(con => blocksRepo.GetLastConfirmedBlockRewardAsync(con, pool.Id, ct));
+        var lastBlockTime = await cf.Run(con => blocksRepo.GetLastPoolBlockTimeAsync(con, pool.Id, ct));
         response.Pool.LastPoolBlockTime = lastBlockTime;
 
         if(lastBlockTime.HasValue)
         {
             var startTime = lastBlockTime.Value;
-            var poolEffort = await cf.Run(con => shareRepo.GetEffortBetweenCreatedAsync(con, pool.Id, poolInstance.ShareMultiplier, startTime, clock.Now));
+            var poolEffort = await cf.Run(con => shareRepo.GetEffortBetweenCreatedAsync(con, pool.Id, poolInstance.ShareMultiplier, startTime, clock.Now, ct));
             if(poolEffort.HasValue)
                 response.Pool.PoolEffort = poolEffort.Value;
         }
@@ -393,7 +401,22 @@ public class PoolApiController : ApiControllerBase
                     stats.LastPaymentLink = string.Format(baseUrl, statsResult.LastPayment.TransactionConfirmationData);
             }
 
+            var lastBlockTime = await cf.Run(con => blocksRepo.GetLastPoolBlockTimeAsync(con, pool.Id, ct));
+            if(lastBlockTime.HasValue)
+            {
+                var startTime = lastBlockTime.Value;
+                var minerEffort = await cf.Run(con => shareRepo.GetMinerEffortBetweenCreatedAsync(con, pool.Id, address, startTime, clock.Now, ct));
+                if(minerEffort.HasValue)
+                    stats.MinerEffort = minerEffort.Value;
+            }
+
             stats.PerformanceSamples = await GetMinerPerformanceInternal(perfMode, pool, address, ct);
+
+            // add total confirmed and pending blocks
+            var totalConfirmedBlocks = await cf.Run(con => statsRepo.GetMinerTotalConfirmedBlocksAsync(con, pool.Id, address, ct));
+            var totalPendingBlocks = await cf.Run(con => statsRepo.GetMinerTotalPendingBlocksAsync(con, pool.Id, address, ct));
+            stats.TotalConfirmedBlocks = totalConfirmedBlocks;
+            stats.TotalPendingBlocks = totalPendingBlocks;
         }
 
         return stats;

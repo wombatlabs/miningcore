@@ -6,6 +6,13 @@ public class TransferDestination
 {
     public string Address { get; set; }
     public ulong Amount { get; set; }
+
+    // Salvium
+    /// <summary>
+    /// Define the type of coin to be received
+    /// </summary>
+    [JsonProperty("asset_type", NullValueHandling = NullValueHandling.Ignore)]
+    public string AssetType { get; set; }
 }
 
 public class TransferRequest
@@ -51,4 +58,25 @@ public class TransferRequest
     /// </summary>
     [JsonProperty("unlock_time")]
     public uint UnlockTime { get; set; }
+
+    // Salvium
+    /// <summary>
+    /// Define the type of transaction
+    /// </summary>
+    [JsonProperty("tx_type", NullValueHandling = NullValueHandling.Ignore)]
+    public uint? TransactionType { get; set; }
+
+    // Salvium
+    /// <summary>
+    /// Define the type of coin to be sent
+    /// </summary>
+    [JsonProperty("source_asset", NullValueHandling = NullValueHandling.Ignore)]
+    public string SourceAsset { get; set; }
+
+    // Salvium
+    /// <summary>
+    /// Define the type of coin to be received
+    /// </summary>
+    [JsonProperty("dest_asset", NullValueHandling = NullValueHandling.Ignore)]
+    public string DestinationAsset { get; set; }
 }

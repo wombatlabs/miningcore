@@ -28,6 +28,7 @@ public static class AlephiumConstants
     
     // Socket miner API
     public const int MessageHeaderSize = 4; // 4 bytes body length
+    public const byte MiningProtocolVersion = 0x01;
     public const byte JobsMessageType = 0x00;
     public const byte SubmitResultMessageType = 0x01;
     public const byte SubmitBlockMessageType = 0x00;

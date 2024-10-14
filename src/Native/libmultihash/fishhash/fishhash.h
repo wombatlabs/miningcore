@@ -61,10 +61,9 @@ namespace FishHash {
 	
 	
 	EXPORT struct fishhash_context* fishhash_get_context(bool full = false) NOEXCEPT;
-        EXPORT union fishhash_hash256 fishhash_kernel( const fishhash_context * ctx, const fishhash_hash512 seed) NOEXCEPT;
-        EXPORT union fishhash_hash256 fishhashplus_kernel( const fishhash_context * ctx, const fishhash_hash512 seed) NOEXCEPT;
 	EXPORT void fishhash_prebuild_dataset(fishhash_context * ctx, uint32_t numThreads = 1) NOEXCEPT;
-	EXPORT void fishhash_hash(uint8_t * output, const fishhash_context * ctx, const uint8_t * header, uint64_t header_size, bool enable_fishhashplus = false) NOEXCEPT;
+	EXPORT void fishhash_hash(uint8_t * output, const fishhash_context * ctx, const uint8_t * header, uint64_t header_size, uint8_t fishhashkernel = 1) NOEXCEPT;
+        EXPORT void fishhaskarlsen_hash(uint8_t * output, const fishhash_context * ctx, const uint8_t * header, uint64_t header_size, uint8_t fishhashkernel = 1) NOEXCEPT;
 }
 
 #ifdef __cplusplus

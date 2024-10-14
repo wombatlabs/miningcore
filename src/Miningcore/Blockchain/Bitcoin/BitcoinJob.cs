@@ -252,6 +252,9 @@ public class BitcoinJob
         if(coin.HasCommunityAddress)
             rewardToPool = CreateCommunityAddressOutputs(tx, rewardToPool);
 
+        if(coin.HasCoinbaseDevReward)
+            rewardToPool = CreateCoinbaseDevRewardOutputs(tx, rewardToPool);
+
         // Remaining amount goes to pool
         tx.Outputs.Add(rewardToPool, poolAddressDestination);
 
@@ -307,7 +310,7 @@ public class BitcoinJob
             Nonce = nonce
         };
 
-        return blockHeader.ToBytes();
+            return blockHeader.ToBytes();
     }
 
     protected virtual (Share Share, string BlockHex) ProcessShareInternal(
@@ -571,6 +574,32 @@ public class BitcoinJob
     }
     #endregion // CommunityAddres
 
+    #region CoinbaseDevReward
+
+    protected CoinbaseDevRewardTemplateExtra CoinbaseDevRewardParams;
+
+    protected virtual Money CreateCoinbaseDevRewardOutputs(Transaction tx, Money reward)
+    {
+        if(CoinbaseDevRewardParams.CoinbaseDevReward != null)
+        {
+            CoinbaseDevReward[] CBRewards;
+            CBRewards = new[] { CoinbaseDevRewardParams.CoinbaseDevReward.ToObject<CoinbaseDevReward>() };
+
+            foreach(var CBReward in CBRewards)
+            {
+                if(!string.IsNullOrEmpty(CBReward.ScriptPubkey))
+                {
+                    Script payeeAddress = new Script(CBReward.ScriptPubkey.HexToByteArray());
+                    var payeeReward = CBReward.Value;
+                    tx.Outputs.Add(payeeReward, payeeAddress);
+                }
+            }
+        }
+        return reward;
+    }
+
+    #endregion // CoinbaseDevReward
+
     #region API-Surface
 
     public BlockTemplate BlockTemplate { get; protected set; }
@@ -646,6 +675,9 @@ public class BitcoinJob
 
         if (coin.HasMinerFund)
             minerFundParameters = BlockTemplate.Extra.SafeExtensionDataAs<MinerFundTemplateExtra>("coinbasetxn", "minerfund");
+
+        if(coin.HasCoinbaseDevReward)
+            CoinbaseDevRewardParams = BlockTemplate.Extra.SafeExtensionDataAs<CoinbaseDevRewardTemplateExtra>();
 
         this.coinbaseHasher = coinbaseHasher;
         this.headerHasher = headerHasher;

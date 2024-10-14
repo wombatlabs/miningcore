@@ -115,6 +115,8 @@ public class EthereumPayoutHandler : PayoutHandlerBase,
                 result.Add(block);
 
                 messageBus.NotifyBlockConfirmationProgress(poolConfig.Id, block, coin);
+
+                uint totalDuplicateBlockBefore = 0;
                 
                 // is it block mined by us?
                 if(string.Equals(blockInfo.Miner, poolConfig.Address, StringComparison.OrdinalIgnoreCase))
@@ -147,8 +149,28 @@ public class EthereumPayoutHandler : PayoutHandlerBase,
                         {
                             logger.Info(() => $"[{LogCategory}] Got {totalDuplicateBlock} `{block.Status}` blocks with the same blockHeight: {block.BlockHeight}");
                             
-                            block.Reward = GetUncleReward(chainType, block.BlockHeight, block.BlockHeight);
-                            block.Status = BlockStatus.Confirmed;
+                            totalDuplicateBlockBefore = await cf.Run(con => blockRepo.GetPoolDuplicateBlockBeforeCountByPoolHeightNoTypeAndStatusAsync(con, poolConfig.Id, Convert.ToInt64(block.BlockHeight), new[]
+                            {
+                                BlockStatus.Confirmed,
+                                BlockStatus.Orphaned,
+                                BlockStatus.Pending
+                            }, block.Created));
+                            
+                            block.Reward = GetUncleReward(chainType, block.BlockHeight, block.BlockHeight, totalDuplicateBlockBefore);
+
+                            // There is a rare case-scenario where an Uncle has a block reward of zero
+                            // We must handle it carefully otherwise payout will be stuck forever
+                            if(block.Reward > 0)
+                            {
+                                block.Status = BlockStatus.Confirmed;
+                                block.ConfirmationProgress = 1;
+                            }
+                            else
+                            {
+                                block.Status = BlockStatus.Orphaned;
+                                block.Reward = 0;
+                            }
+
                             block.ConfirmationProgress = 1;
                             block.BlockHeight = (ulong) blockInfo.Height;
                             block.Type = EthereumConstants.BlockTypeUncle;
@@ -233,9 +255,16 @@ public class EthereumPayoutHandler : PayoutHandlerBase,
 
                         if(uncle != null)
                         {
+                            totalDuplicateBlockBefore = await cf.Run(con => blockRepo.GetPoolDuplicateBlockBeforeCountByPoolHeightNoTypeAndStatusAsync(con, poolConfig.Id, Convert.ToInt64(uncle.Height.Value), new[]
+                            {
+                                BlockStatus.Confirmed,
+                                BlockStatus.Orphaned,
+                                BlockStatus.Pending
+                            }, block.Created));
+
                             // mature?
                             if(block.Reward == 0)
-                                block.Reward = GetUncleReward(chainType, uncle.Height.Value, blockInfo2.Height.Value);
+                                block.Reward = GetUncleReward(chainType, uncle.Height.Value, blockInfo2.Height.Value, totalDuplicateBlockBefore);
 
                             if(latestBlockHeight - uncle.Height.Value >= EthereumConstants.MinConfimations)
                             {
@@ -254,7 +283,7 @@ public class EthereumPayoutHandler : PayoutHandlerBase,
                                 }
                                 
                                 block.Hash = uncle.Hash;
-                                block.Reward = GetUncleReward(chainType, uncle.Height.Value, blockInfo2.Height.Value);
+                                block.Reward = GetUncleReward(chainType, uncle.Height.Value, blockInfo2.Height.Value, totalDuplicateBlockBefore);
                                 block.BlockHeight = uncle.Height.Value;
 
                                 // There is a rare case-scenario where an Uncle has a block reward of zero
@@ -496,7 +525,7 @@ public class EthereumPayoutHandler : PayoutHandlerBase,
         return result;
     }
 
-    internal static decimal GetUncleReward(GethChainType chainType, ulong uheight, ulong height)
+    internal static decimal GetUncleReward(GethChainType chainType, ulong uheight, ulong height, uint totalDuplicateBlockBefore)
     {
         var reward = GetBaseBlockReward(chainType, height);
         
@@ -539,7 +568,10 @@ public class EthereumPayoutHandler : PayoutHandlerBase,
 
                 break;
         }
-        
+
+        if(totalDuplicateBlockBefore > 0)
+            reward = 0m;
+
         return reward;
     }
 

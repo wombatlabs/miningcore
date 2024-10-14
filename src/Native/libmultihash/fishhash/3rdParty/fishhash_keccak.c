@@ -1,4 +1,4 @@
-#include "keccak.h"
+#include "fishhash_keccak.h"
 #include <stdint.h>
 
 /*
@@ -64,7 +64,7 @@ static const uint64_t round_constants[24] = {
     0x8000000080008008,
 };
 
-void keccakf1600(uint64_t state[25]) {
+void fishash_keccakf1600(uint64_t state[25]) {
     int round;
 
     uint64_t Aba, Abe, Abi, Abo, Abu;
@@ -281,7 +281,7 @@ void keccakf1600(uint64_t state[25]) {
 
 
 
-inline void keccak( uint64_t* out, size_t bits, const uint8_t* data, size_t size) {
+inline void fishash_keccak( uint64_t* out, size_t bits, const uint8_t* data, size_t size) {
 
     static const size_t word_size = sizeof(uint64_t);
     const size_t hash_size = bits / 8;
@@ -302,7 +302,7 @@ inline void keccak( uint64_t* out, size_t bits, const uint8_t* data, size_t size
             data += word_size;
         }
 
-        keccakf1600(state);
+        fishash_keccakf1600(state);
 
         size -= block_size;
     }
@@ -329,7 +329,7 @@ inline void keccak( uint64_t* out, size_t bits, const uint8_t* data, size_t size
 
     state[(block_size / word_size) - 1] ^= 0x8000000000000000;
 
-    keccakf1600(state);
+    fishash_keccakf1600(state);
 
     for (i = 0; i < (hash_size / word_size); ++i)
         out[i] = state[i];

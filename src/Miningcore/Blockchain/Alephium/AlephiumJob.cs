@@ -56,18 +56,23 @@ public class AlephiumJob
         return submissions.TryAdd(key, true);
     }
     
-    public virtual byte[] SerializeCoinbase(string nonce)
+    public virtual byte[] SerializeCoinbase(string nonce, int socketMiningProtocol = 0)
     {
         var nonceBytes = (Span<byte>) nonce.HexToByteArray();
         var headerBlobBytes = (Span<byte>) BlockTemplate.HeaderBlob.HexToByteArray();
         var txsBlobBytes = (Span<byte>) BlockTemplate.TxsBlob.HexToByteArray();
-        
+
         uint blockSize = (uint)nonceBytes.Length + (uint)headerBlobBytes.Length + (uint)txsBlobBytes.Length;
-        uint messageSize = 4 + 1 + blockSize; // encodedBlockSize(4 bytes) + messageType(1 byte)
-        
+        int messagePrefixSize = (socketMiningProtocol > 0) ? 1 + 1 + 4: 4 + 1; // socketMiningProtocol: 0 => encodedBlockSize(4 bytes) + messageType(1 byte) || socketMiningProtocol: 1 => version(1 byte) + messageType(1 byte) + encodedBlockSize(4 bytes)
+        uint messageSize = (uint)messagePrefixSize + blockSize;
+
         using(var stream = new MemoryStream())
         {
             stream.Write(GetBigEndianUInt32(messageSize));
+
+            if(socketMiningProtocol > 0)
+                stream.WriteByte(AlephiumConstants.MiningProtocolVersion);
+
             stream.WriteByte(AlephiumConstants.SubmitBlockMessageType);
             stream.Write(GetBigEndianUInt32(blockSize));
             stream.Write(nonceBytes);

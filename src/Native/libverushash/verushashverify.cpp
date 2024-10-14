@@ -95,6 +95,17 @@ void verushash2b2(char* input, char* output, int input_len)
     delete vh2b2;
 }
 
+void verushash2b2o(char* input, char* output, int input_len)
+{
+    //CVerusHashV2* vh2b2o;
+    CVerusHashV2::init();
+    CVerusHashV2* vh2b2o = new CVerusHashV2(SOLUTION_VERUSHHASH_V2_2);
+    vh2b2o->Reset();
+    vh2b2o->Write((const unsigned char *)input, input_len);
+    vh2b2o->Finalize2b((unsigned char *)output);
+    delete vh2b2o;
+}
+
 void verushash2b1(char* input, char* output, int input_len)
 {
     //CVerusHashV2* vh2b1;

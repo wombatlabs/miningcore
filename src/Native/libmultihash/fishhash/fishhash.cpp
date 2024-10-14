@@ -1,5 +1,5 @@
 #include "fishhash.h"
-#include "3rdParty/keccak.h"
+#include "3rdParty/fishhash_keccak.h"
 #include "../blake3/blake3.h"
 
 #include <cstdlib>
@@ -77,7 +77,7 @@ namespace FishHash {
 		mix = cache[index % num_cache_items];
 		mix.word32s[0] ^= seed;
 				
-		keccak(mix.word64s, 512, mix.bytes, 64);
+		fishash_keccak(mix.word64s, 512, mix.bytes, 64);
 		
 	    }
 
@@ -90,7 +90,7 @@ namespace FishHash {
 	    }
 
 	    inline fishhash_hash512 final() noexcept { 
-	    	keccak(mix.word64s, 512, mix.bytes, 64);
+	    	fishash_keccak(mix.word64s, 512, mix.bytes, 64);
 	    	return mix; 
 	    }
 	};
@@ -132,9 +132,8 @@ namespace FishHash {
 		}
 	}
 
-	fishhash_hash256 fishhash_kernel( const fishhash_context * ctx, const fishhash_hash512 seed) noexcept {
-		const uint32_t index_limit = static_cast<uint32_t>(ctx->full_dataset_num_items);
-		const uint32_t seed_init = seed.word32s[0];
+	inline fishhash_hash256 fishhash_kernel( const fishhash_context& ctx, const fishhash_hash512& seed) noexcept {
+		const uint32_t index_limit = static_cast<uint32_t>(ctx.full_dataset_num_items);
 	    
 		fishhash_hash1024 mix{seed, seed};
 
@@ -145,9 +144,9 @@ namespace FishHash {
                         const uint32_t p1 = mix.word32s[4] % index_limit;
                         const uint32_t p2 = mix.word32s[8] % index_limit;
 
-			fishhash_hash1024 fetch0 = lookup(*ctx, p0);
-			fishhash_hash1024 fetch1 = lookup(*ctx, p1);
-			fishhash_hash1024 fetch2 = lookup(*ctx, p2);
+			fishhash_hash1024 fetch0 = lookup(ctx, p0);
+			fishhash_hash1024 fetch1 = lookup(ctx, p1);
+			fishhash_hash1024 fetch2 = lookup(ctx, p2);
 
 			// Modify fetch1 and fetch2
 			for (size_t j = 0; j < 32; ++j) {
@@ -173,9 +172,8 @@ namespace FishHash {
 		return mix_hash;
 	}
 
-        fishhash_hash256 fishhashplus_kernel( const fishhash_context * ctx, const fishhash_hash512 seed) noexcept {
-		const uint32_t index_limit = static_cast<uint32_t>(ctx->full_dataset_num_items);
-		const uint32_t seed_init = seed.word32s[0];
+        inline fishhash_hash256 fishhashplus_kernel( const fishhash_context& ctx, const fishhash_hash512& seed) noexcept {
+		const uint32_t index_limit = static_cast<uint32_t>(ctx.full_dataset_num_items);
 	    
 		fishhash_hash1024 mix{seed, seed};
 
@@ -192,9 +190,9 @@ namespace FishHash {
                         uint32_t p1 = (mixGroup[1] ^ mixGroup[4] ^ mixGroup[7]) % index_limit;
                         uint32_t p2 = (mixGroup[2] ^ mixGroup[5] ^           i) % index_limit;
 
-			fishhash_hash1024 fetch0 = lookup(*ctx, p0);
-			fishhash_hash1024 fetch1 = lookup(*ctx, p1);
-			fishhash_hash1024 fetch2 = lookup(*ctx, p2);
+			fishhash_hash1024 fetch0 = lookup(ctx, p0);
+			fishhash_hash1024 fetch1 = lookup(ctx, p1);
+			fishhash_hash1024 fetch2 = lookup(ctx, p2);
 
 			// Modify fetch1 and fetch2
 			for (size_t j = 0; j < 32; ++j) {
@@ -220,29 +218,153 @@ namespace FishHash {
 		return mix_hash;
 	}
 
-	void fishhash_hash(uint8_t * output, const fishhash_context * ctx, const uint8_t * header, uint64_t header_size, bool enable_fishhashplus) noexcept {
-		fishhash_hash512 seed; 
-	   
-		blake3_hasher hasher;
-		blake3_hasher_init(&hasher);
-		blake3_hasher_update(&hasher, header, header_size);
-		blake3_hasher_finalize(&hasher, seed.bytes, 64);
+        inline fishhash_hash256 fishhashv2_kernel( const fishhash_context& ctx, const fishhash_hash1024& seed) noexcept {
+		const uint32_t index_limit = static_cast<uint32_t>(ctx.full_dataset_num_items);
+	    
+		fishhash_hash1024 mix = seed;
 
-                const fishhash_hash256 mix_hash = enable_fishhashplus ? fishhashplus_kernel(ctx, seed): fishhash_kernel(ctx, seed);
-	    
-		uint8_t final_data[sizeof(seed) + sizeof(mix_hash)];
-		std::memcpy(&final_data[0], seed.bytes, sizeof(seed));
-		std::memcpy(&final_data[sizeof(seed)], mix_hash.bytes, sizeof(mix_hash));
-	    
-		fishhash_hash256 finValue;
-	    
-		if (!output) output = static_cast<uint8_t*>(std::calloc(1, 32));
-		
-		uint32_t * data = (uint32_t *) final_data;
-			    
-		blake3_hasher_init(&hasher);
-		blake3_hasher_update(&hasher, final_data, 64 + 32);
-		blake3_hasher_finalize(&hasher, output, 32);
+		for (uint32_t i = 0; i < num_dataset_accesses; ++i) {
+
+			// Calculate new fetching indexes
+                        uint32_t mixGroup[8]; 
+                        for (uint32_t c=0; c<8; c++) {
+                                mixGroup[c] = (mix.word32s[4*c + 0] ^ mix.word32s[4*c + 1] ^ mix.word32s[4*c + 2] ^ mix.word32s[4*c + 3]);
+                        }
+
+
+                        uint32_t p0 = (mixGroup[0] ^ mixGroup[3] ^ mixGroup[6]) % index_limit;
+                        uint32_t p1 = (mixGroup[1] ^ mixGroup[4] ^ mixGroup[7]) % index_limit;
+                        uint32_t p2 = (mixGroup[2] ^ mixGroup[5] ^           i) % index_limit;
+
+			fishhash_hash1024 fetch0 = lookup(ctx, p0);
+			fishhash_hash1024 fetch1 = lookup(ctx, p1);
+			fishhash_hash1024 fetch2 = lookup(ctx, p2);
+
+			// Modify fetch1 and fetch2
+			for (size_t j = 0; j < 32; ++j) {
+				fetch1.word32s[j] = fnv1(mix.word32s[j], fetch1.word32s[j]);
+				fetch2.word32s[j] = mix.word32s[j] ^ fetch2.word32s[j];
+			}
+						
+		     	// Final computation of new mix
+			for (size_t j = 0; j < 16; ++j)
+				mix.word64s[j] = fetch0.word64s[j] * fetch1.word64s[j] + fetch2.word64s[j];
+		}
+
+		// Collapse the result into 32 bytes
+		fishhash_hash256 mix_hash;
+		static constexpr size_t num_words = sizeof(mix) / sizeof(uint32_t);
+		for (size_t i = 0; i < num_words; i += 4) {
+			const uint32_t h1 = fnv1(mix.word32s[i], mix.word32s[i + 1]);
+			const uint32_t h2 = fnv1(h1, mix.word32s[i + 2]);
+			const uint32_t h3 = fnv1(h2, mix.word32s[i + 3]);
+			mix_hash.word32s[i / 4] = h3;
+		}
+
+		return mix_hash;
+	}
+
+	void fishhash_hash(uint8_t * output, const fishhash_context * ctx, const uint8_t * header, uint64_t header_size, uint8_t fishhashkernel) noexcept {                
+                if (fishhashkernel == 3) {
+                    fishhash_hash1024 seed;
+
+                    blake3_hasher hasher;
+                    blake3_hasher_init(&hasher);
+                    blake3_hasher_update(&hasher, header, header_size);
+                    blake3_hasher_finalize(&hasher, seed.bytes, 128);
+
+                    const fishhash_hash256 mix_hash = fishhashv2_kernel(*ctx, seed);
+
+                    uint8_t final_data[sizeof(seed) / 2 + sizeof(mix_hash)];
+                    std::memcpy(&final_data[0], seed.bytes, sizeof(seed) / 2);
+                    std::memcpy(&final_data[sizeof(seed) / 2], mix_hash.bytes, sizeof(mix_hash));
+
+                    if (!output) output = static_cast<uint8_t*>(std::calloc(1, 32));
+
+                    uint32_t * data = (uint32_t *) final_data;
+
+                    blake3_hasher_init(&hasher);
+                    blake3_hasher_update(&hasher, final_data, 64 + 32);
+                    blake3_hasher_finalize(&hasher, output, 32);
+                } else if (fishhashkernel == 2) {
+                    fishhash_hash512 seed;
+
+                    blake3_hasher hasher;
+                    blake3_hasher_init(&hasher);
+                    blake3_hasher_update(&hasher, header, header_size);
+                    blake3_hasher_finalize(&hasher, seed.bytes, 64);
+
+                    const fishhash_hash256 mix_hash = fishhashplus_kernel(*ctx, seed);
+
+                    uint8_t final_data[sizeof(seed) + sizeof(mix_hash)];
+                    std::memcpy(&final_data[0], seed.bytes, sizeof(seed));
+                    std::memcpy(&final_data[sizeof(seed)], mix_hash.bytes, sizeof(mix_hash));
+
+                    if (!output) output = static_cast<uint8_t*>(std::calloc(1, 32));
+
+                    uint32_t * data = (uint32_t *) final_data;
+
+                    blake3_hasher_init(&hasher);
+                    blake3_hasher_update(&hasher, final_data, 64 + 32);
+                    blake3_hasher_finalize(&hasher, output, 32);
+                } else {
+                    fishhash_hash512 seed;
+
+                    blake3_hasher hasher;
+                    blake3_hasher_init(&hasher);
+                    blake3_hasher_update(&hasher, header, header_size);
+                    blake3_hasher_finalize(&hasher, seed.bytes, 64);
+
+                    const fishhash_hash256 mix_hash = fishhash_kernel(*ctx, seed);
+
+                    uint8_t final_data[sizeof(seed) + sizeof(mix_hash)];
+                    std::memcpy(&final_data[0], seed.bytes, sizeof(seed));
+                    std::memcpy(&final_data[sizeof(seed)], mix_hash.bytes, sizeof(mix_hash));
+
+                    if (!output) output = static_cast<uint8_t*>(std::calloc(1, 32));
+
+                    uint32_t * data = (uint32_t *) final_data;
+
+                    blake3_hasher_init(&hasher);
+                    blake3_hasher_update(&hasher, final_data, 64 + 32);
+                    blake3_hasher_finalize(&hasher, output, 32);
+                }
+	}
+
+        void fishhaskarlsen_hash(uint8_t * output, const fishhash_context * ctx, const uint8_t * header, uint64_t header_size, uint8_t fishhashkernel) noexcept {
+                if (fishhashkernel == 2) {
+                    fishhash_hash512 seed;
+                    memset((void*)&seed, 0, sizeof(seed));
+
+                    blake3_hasher hasher;
+                    blake3_hasher_init(&hasher);
+                    blake3_hasher_update(&hasher, header, header_size);
+                    blake3_hasher_finalize(&hasher, seed.bytes, 32);
+
+                    const fishhash_hash256 mix_hash = fishhashplus_kernel(*ctx, seed);
+
+                    if (!output) output = static_cast<uint8_t*>(std::calloc(1, 32));
+
+                    blake3_hasher_init(&hasher);
+                    blake3_hasher_update(&hasher, mix_hash.bytes, sizeof(mix_hash));
+                    blake3_hasher_finalize(&hasher, output, 32);
+                } else {
+                    fishhash_hash512 seed;
+                    memset((void*)&seed, 0, sizeof(seed));
+
+                    blake3_hasher hasher;
+                    blake3_hasher_init(&hasher);
+                    blake3_hasher_update(&hasher, header, header_size);
+                    blake3_hasher_finalize(&hasher, seed.bytes, 32);
+
+                    const fishhash_hash256 mix_hash = fishhash_kernel(*ctx, seed);
+
+                    if (!output) output = static_cast<uint8_t*>(std::calloc(1, 32));
+
+                    blake3_hasher_init(&hasher);
+                    blake3_hasher_update(&hasher, mix_hash.bytes, sizeof(mix_hash));
+                    blake3_hasher_finalize(&hasher, output, 32);
+                }
 	}
 	
 	inline fishhash_hash512 bitwise_xor(const fishhash_hash512& x, const fishhash_hash512& y) noexcept {
@@ -254,11 +376,11 @@ namespace FishHash {
 	
 	void build_light_cache( fishhash_hash512 cache[], int num_items, const fishhash_hash256& seed) noexcept {
 		fishhash_hash512 item;
-		keccak(item.word64s, 512, seed.bytes, sizeof(seed));
+		fishash_keccak(item.word64s, 512, seed.bytes, sizeof(seed));
 		cache[0] = item;
 		
 		for (int i = 1; i < num_items; ++i) {
-			keccak(item.word64s, 512, item.bytes, sizeof(item));
+			fishash_keccak(item.word64s, 512, item.bytes, sizeof(item));
 			cache[i] = item;
 		}
 
@@ -274,7 +396,7 @@ namespace FishHash {
 			    const uint32_t w = static_cast<uint32_t>(num_items + (i - 1)) % index_limit;
 
 			    const fishhash_hash512 x = bitwise_xor(cache[v], cache[w]);			    
-			    keccak(cache[i].word64s, 512, x.bytes, sizeof(x));
+			    fishash_keccak(cache[i].word64s, 512, x.bytes, sizeof(x));
 			    
 			}
 		}

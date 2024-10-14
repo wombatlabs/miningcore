@@ -531,6 +531,7 @@
           "type": "string",
           "enum": [
             "PPLNS",
+            "PPLNSBF",
             "PROP",
             "SOLO",
             "PPS",
@@ -557,6 +558,18 @@
         },
         "time": {
           "type": "integer"
+        },
+        "minerEffortPercent": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "minerEffortTime": {
+          "type": [
+            "integer",
+            "null"
+          ]
         }
       }
     },

@@ -78,14 +78,31 @@ namespace Miningcore.Blockchain.Kaspa.KaspaWalletd {
             "Lkthc3BhV2FsbGV0ZC5TZW5kUmVzcG9uc2UiABI/CgRTaWduEhkuS2FzcGFX",
             "YWxsZXRkLlNpZ25SZXF1ZXN0GhouS2FzcGFXYWxsZXRkLlNpZ25SZXNwb25z",
             "ZSIAQiuqAihNaW5pbmdjb3JlLkJsb2NrY2hhaW4uS2FzcGEuS2FzcGFXYWxs",
-            "ZXRkYgZwcm90bzM="));
+            "ZXN0GiMua2FzcGF3YWxsZXRkLlNob3dBZGRyZXNzZXNSZXNwb25zZSIAElEK",
+            "Ck5ld0FkZHJlc3MSHy5rYXNwYXdhbGxldGQuTmV3QWRkcmVzc1JlcXVlc3Qa",
+            "IC5rYXNwYXdhbGxldGQuTmV3QWRkcmVzc1Jlc3BvbnNlIgASSwoIU2h1dGRv",
+            "d24SHS5rYXNwYXdhbGxldGQuU2h1dGRvd25SZXF1ZXN0Gh4ua2FzcGF3YWxs",
+            "ZXRkLlNodXRkb3duUmVzcG9uc2UiABJOCglCcm9hZGNhc3QSHi5rYXNwYXdh",
+            "bGxldGQuQnJvYWRjYXN0UmVxdWVzdBofLmthc3Bhd2FsbGV0ZC5Ccm9hZGNh",
+            "c3RSZXNwb25zZSIAElkKFEJyb2FkY2FzdFJlcGxhY2VtZW50Eh4ua2FzcGF3",
+            "YWxsZXRkLkJyb2FkY2FzdFJlcXVlc3QaHy5rYXNwYXdhbGxldGQuQnJvYWRj",
+            "YXN0UmVzcG9uc2UiABI/CgRTZW5kEhkua2FzcGF3YWxsZXRkLlNlbmRSZXF1",
+            "ZXN0Ghoua2FzcGF3YWxsZXRkLlNlbmRSZXNwb25zZSIAEj8KBFNpZ24SGS5r",
+            "YXNwYXdhbGxldGQuU2lnblJlcXVlc3QaGi5rYXNwYXdhbGxldGQuU2lnblJl",
+            "c3BvbnNlIgASUQoKR2V0VmVyc2lvbhIfLmthc3Bhd2FsbGV0ZC5HZXRWZXJz",
+            "aW9uUmVxdWVzdBogLmthc3Bhd2FsbGV0ZC5HZXRWZXJzaW9uUmVzcG9uc2Ui",
+            "ABJICgdCdW1wRmVlEhwua2FzcGF3YWxsZXRkLkJ1bXBGZWVSZXF1ZXN0Gh0u",
+            "a2FzcGF3YWxsZXRkLkJ1bXBGZWVSZXNwb25zZSIAQltaNGdpdGh1Yi5jb20v",
+            "a2FzcGFuZXQva2FzcGFkL2NtZC9rYXNwYXdhbGxldC9kYWVtb24vcGKqAiJH",
+            "cnBjR3JlZXRlckNsaWVudC5SUEMuS2FzcGFXYWxsZXRkYgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetBalanceRequest), global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetBalanceRequest.Parser, null, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetBalanceResponse), global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetBalanceResponse.Parser, new[]{ "Available", "Pending", "AddressBalances" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.AddressBalances), global::Miningcore.Blockchain.Kaspa.KaspaWalletd.AddressBalances.Parser, new[]{ "Address", "Available", "Pending" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.CreateUnsignedTransactionsRequest), global::Miningcore.Blockchain.Kaspa.KaspaWalletd.CreateUnsignedTransactionsRequest.Parser, new[]{ "Address", "Amount", "From", "UseExistingChangeAddress", "IsSendAll" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.FeePolicy), global::Miningcore.Blockchain.Kaspa.KaspaWalletd.FeePolicy.Parser, new[]{ "MaxFeeRate", "ExactFeeRate", "MaxFee" }, new[]{ "FeePolicy" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.CreateUnsignedTransactionsRequest), global::Miningcore.Blockchain.Kaspa.KaspaWalletd.CreateUnsignedTransactionsRequest.Parser, new[]{ "Address", "Amount", "From", "UseExistingChangeAddress", "IsSendAll", "FeePolicy" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.CreateUnsignedTransactionsResponse), global::Miningcore.Blockchain.Kaspa.KaspaWalletd.CreateUnsignedTransactionsResponse.Parser, new[]{ "UnsignedTransactions" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.ShowAddressesRequest), global::Miningcore.Blockchain.Kaspa.KaspaWalletd.ShowAddressesRequest.Parser, null, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.ShowAddressesResponse), global::Miningcore.Blockchain.Kaspa.KaspaWalletd.ShowAddressesResponse.Parser, new[]{ "Address" }, null, null, null, null),
@@ -101,10 +118,14 @@ namespace Miningcore.Blockchain.Kaspa.KaspaWalletd {
             new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.UtxoEntry), global::Miningcore.Blockchain.Kaspa.KaspaWalletd.UtxoEntry.Parser, new[]{ "Amount", "ScriptPublicKey", "BlockDaaScore", "IsCoinbase" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetExternalSpendableUTXOsRequest), global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetExternalSpendableUTXOsRequest.Parser, new[]{ "Address" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetExternalSpendableUTXOsResponse), global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetExternalSpendableUTXOsResponse.Parser, new[]{ "Entries" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.SendRequest), global::Miningcore.Blockchain.Kaspa.KaspaWalletd.SendRequest.Parser, new[]{ "ToAddress", "Amount", "Password", "From", "UseExistingChangeAddress", "IsSendAll" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.SendRequest), global::Miningcore.Blockchain.Kaspa.KaspaWalletd.SendRequest.Parser, new[]{ "ToAddress", "Amount", "Password", "From", "UseExistingChangeAddress", "IsSendAll", "FeePolicy" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.SendResponse), global::Miningcore.Blockchain.Kaspa.KaspaWalletd.SendResponse.Parser, new[]{ "TxIDs", "SignedTransactions" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.SignRequest), global::Miningcore.Blockchain.Kaspa.KaspaWalletd.SignRequest.Parser, new[]{ "UnsignedTransactions", "Password" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.SignResponse), global::Miningcore.Blockchain.Kaspa.KaspaWalletd.SignResponse.Parser, new[]{ "SignedTransactions" }, null, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.SignResponse), global::Miningcore.Blockchain.Kaspa.KaspaWalletd.SignResponse.Parser, new[]{ "SignedTransactions" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetVersionRequest), global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetVersionRequest.Parser, null, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetVersionResponse), global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetVersionResponse.Parser, new[]{ "Version" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.BumpFeeRequest), global::Miningcore.Blockchain.Kaspa.KaspaWalletd.BumpFeeRequest.Parser, new[]{ "Password", "From", "UseExistingChangeAddress", "FeePolicy", "TxID" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.BumpFeeResponse), global::Miningcore.Blockchain.Kaspa.KaspaWalletd.BumpFeeResponse.Parser, new[]{ "Transactions", "TxIDs" }, null, null, null, null)
           }));
     }
     #endregion
@@ -574,6 +595,267 @@ namespace Miningcore.Blockchain.Kaspa.KaspaWalletd {
 
   }
 
+  public sealed partial class FeePolicy : pb::IMessage<FeePolicy> {
+    private static readonly pb::MessageParser<FeePolicy> _parser = new pb::MessageParser<FeePolicy>(() => new FeePolicy());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<FeePolicy> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Miningcore.Blockchain.Kaspa.KaspaWalletd.KaspawalletdReflection.Descriptor.MessageTypes[3]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public FeePolicy() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public FeePolicy(FeePolicy other) : this() {
+      switch (other.FeePolicyCase) {
+        case FeePolicyOneofCase.MaxFeeRate:
+          MaxFeeRate = other.MaxFeeRate;
+          break;
+        case FeePolicyOneofCase.ExactFeeRate:
+          ExactFeeRate = other.ExactFeeRate;
+          break;
+        case FeePolicyOneofCase.MaxFee:
+          MaxFee = other.MaxFee;
+          break;
+      }
+
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public FeePolicy Clone() {
+      return new FeePolicy(this);
+    }
+
+    /// <summary>Field number for the "maxFeeRate" field.</summary>
+    public const int MaxFeeRateFieldNumber = 6;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public double MaxFeeRate {
+      get { return HasMaxFeeRate ? (double) feePolicy_ : 0D; }
+      set {
+        feePolicy_ = value;
+        feePolicyCase_ = FeePolicyOneofCase.MaxFeeRate;
+      }
+    }
+
+    /// <summary>Gets whether the "maxFeeRate" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool HasMaxFeeRate {
+      get { return feePolicyCase_ == FeePolicyOneofCase.MaxFeeRate; }
+    }
+
+    /// <summary> Clears the value of the oneof if it's currently set to "maxFeeRate" </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void ClearMaxFeeRate() {
+      if (HasMaxFeeRate) {
+        ClearFeePolicy();
+      }
+    }
+
+    /// <summary>Field number for the "exactFeeRate" field.</summary>
+    public const int ExactFeeRateFieldNumber = 7;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public double ExactFeeRate {
+      get { return HasExactFeeRate ? (double) feePolicy_ : 0D; }
+      set {
+        feePolicy_ = value;
+        feePolicyCase_ = FeePolicyOneofCase.ExactFeeRate;
+      }
+    }
+
+    /// <summary>Gets whether the "exactFeeRate" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool HasExactFeeRate {
+      get { return feePolicyCase_ == FeePolicyOneofCase.ExactFeeRate; }
+    }
+
+    /// <summary> Clears the value of the oneof if it's currently set to "exactFeeRate" </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void ClearExactFeeRate() {
+      if (HasExactFeeRate) {
+        ClearFeePolicy();
+      }
+    }
+
+    /// <summary>Field number for the "maxFee" field.</summary>
+    public const int MaxFeeFieldNumber = 8;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public ulong MaxFee {
+      get { return HasMaxFee ? (ulong) feePolicy_ : 0UL; }
+      set {
+        feePolicy_ = value;
+        feePolicyCase_ = FeePolicyOneofCase.MaxFee;
+      }
+    }
+
+    /// <summary>Gets whether the "maxFee" field is set</summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool HasMaxFee {
+      get { return feePolicyCase_ == FeePolicyOneofCase.MaxFee; }
+    }
+
+    /// <summary> Clears the value of the oneof if it's currently set to "maxFee" </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void ClearMaxFee() {
+      if (HasMaxFee) {
+        ClearFeePolicy();
+      }
+    }
+
+    private object feePolicy_;
+    /// <summary>Enum of possible cases for the "feePolicy" oneof.</summary>
+    public enum FeePolicyOneofCase {
+      None = 0,
+      MaxFeeRate = 6,
+      ExactFeeRate = 7,
+      MaxFee = 8,
+    }
+    private FeePolicyOneofCase feePolicyCase_ = FeePolicyOneofCase.None;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public FeePolicyOneofCase FeePolicyCase {
+      get { return feePolicyCase_; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void ClearFeePolicy() {
+      feePolicyCase_ = FeePolicyOneofCase.None;
+      feePolicy_ = null;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as FeePolicy);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(FeePolicy other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (!pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.Equals(MaxFeeRate, other.MaxFeeRate)) return false;
+      if (!pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.Equals(ExactFeeRate, other.ExactFeeRate)) return false;
+      if (MaxFee != other.MaxFee) return false;
+      if (FeePolicyCase != other.FeePolicyCase) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (HasMaxFeeRate) hash ^= pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.GetHashCode(MaxFeeRate);
+      if (HasExactFeeRate) hash ^= pbc::ProtobufEqualityComparers.BitwiseDoubleEqualityComparer.GetHashCode(ExactFeeRate);
+      if (HasMaxFee) hash ^= MaxFee.GetHashCode();
+      hash ^= (int) feePolicyCase_;
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (HasMaxFeeRate) {
+        output.WriteRawTag(49);
+        output.WriteDouble(MaxFeeRate);
+      }
+      if (HasExactFeeRate) {
+        output.WriteRawTag(57);
+        output.WriteDouble(ExactFeeRate);
+      }
+      if (HasMaxFee) {
+        output.WriteRawTag(64);
+        output.WriteUInt64(MaxFee);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (HasMaxFeeRate) {
+        size += 1 + 8;
+      }
+      if (HasExactFeeRate) {
+        size += 1 + 8;
+      }
+      if (HasMaxFee) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt64Size(MaxFee);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(FeePolicy other) {
+      if (other == null) {
+        return;
+      }
+      switch (other.FeePolicyCase) {
+        case FeePolicyOneofCase.MaxFeeRate:
+          MaxFeeRate = other.MaxFeeRate;
+          break;
+        case FeePolicyOneofCase.ExactFeeRate:
+          ExactFeeRate = other.ExactFeeRate;
+          break;
+        case FeePolicyOneofCase.MaxFee:
+          MaxFee = other.MaxFee;
+          break;
+      }
+
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 49: {
+            MaxFeeRate = input.ReadDouble();
+            break;
+          }
+          case 57: {
+            ExactFeeRate = input.ReadDouble();
+            break;
+          }
+          case 64: {
+            MaxFee = input.ReadUInt64();
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
   public sealed partial class CreateUnsignedTransactionsRequest : pb::IMessage<CreateUnsignedTransactionsRequest> {
     private static readonly pb::MessageParser<CreateUnsignedTransactionsRequest> _parser = new pb::MessageParser<CreateUnsignedTransactionsRequest>(() => new CreateUnsignedTransactionsRequest());
     private pb::UnknownFieldSet _unknownFields;
@@ -604,6 +886,7 @@ namespace Miningcore.Blockchain.Kaspa.KaspaWalletd {
       from_ = other.from_.Clone();
       useExistingChangeAddress_ = other.useExistingChangeAddress_;
       isSendAll_ = other.isSendAll_;
+      feePolicy_ = other.feePolicy_ != null ? other.feePolicy_.Clone() : null;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -666,6 +949,17 @@ namespace Miningcore.Blockchain.Kaspa.KaspaWalletd {
       }
     }
 
+    /// <summary>Field number for the "feePolicy" field.</summary>
+    public const int FeePolicyFieldNumber = 6;
+    private global::Miningcore.Blockchain.Kaspa.KaspaWalletd.FeePolicy feePolicy_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Miningcore.Blockchain.Kaspa.KaspaWalletd.FeePolicy FeePolicy {
+      get { return feePolicy_; }
+      set {
+        feePolicy_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
       return Equals(other as CreateUnsignedTransactionsRequest);
@@ -684,6 +978,7 @@ namespace Miningcore.Blockchain.Kaspa.KaspaWalletd {
       if(!from_.Equals(other.from_)) return false;
       if (UseExistingChangeAddress != other.UseExistingChangeAddress) return false;
       if (IsSendAll != other.IsSendAll) return false;
+      if (!object.Equals(FeePolicy, other.FeePolicy)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -695,6 +990,7 @@ namespace Miningcore.Blockchain.Kaspa.KaspaWalletd {
       hash ^= from_.GetHashCode();
       if (UseExistingChangeAddress != false) hash ^= UseExistingChangeAddress.GetHashCode();
       if (IsSendAll != false) hash ^= IsSendAll.GetHashCode();
+      if (feePolicy_ != null) hash ^= FeePolicy.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -725,6 +1021,10 @@ namespace Miningcore.Blockchain.Kaspa.KaspaWalletd {
         output.WriteRawTag(40);
         output.WriteBool(IsSendAll);
       }
+      if (feePolicy_ != null) {
+        output.WriteRawTag(50);
+        output.WriteMessage(FeePolicy);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -745,6 +1045,9 @@ namespace Miningcore.Blockchain.Kaspa.KaspaWalletd {
       }
       if (IsSendAll != false) {
         size += 1 + 1;
+      }
+      if (feePolicy_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(FeePolicy);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -769,6 +1072,12 @@ namespace Miningcore.Blockchain.Kaspa.KaspaWalletd {
       }
       if (other.IsSendAll != false) {
         IsSendAll = other.IsSendAll;
+      }
+      if (other.feePolicy_ != null) {
+        if (feePolicy_ == null) {
+          FeePolicy = new global::Miningcore.Blockchain.Kaspa.KaspaWalletd.FeePolicy();
+        }
+        FeePolicy.MergeFrom(other.FeePolicy);
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -799,6 +1108,13 @@ namespace Miningcore.Blockchain.Kaspa.KaspaWalletd {
           }
           case 40: {
             IsSendAll = input.ReadBool();
+            break;
+          }
+          case 50: {
+            if (feePolicy_ == null) {
+              FeePolicy = new global::Miningcore.Blockchain.Kaspa.KaspaWalletd.FeePolicy();
+            }
+            input.ReadMessage(FeePolicy);
             break;
           }
         }
@@ -2866,6 +3182,7 @@ namespace Miningcore.Blockchain.Kaspa.KaspaWalletd {
       from_ = other.from_.Clone();
       useExistingChangeAddress_ = other.useExistingChangeAddress_;
       isSendAll_ = other.isSendAll_;
+      feePolicy_ = other.feePolicy_ != null ? other.feePolicy_.Clone() : null;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -2939,6 +3256,17 @@ namespace Miningcore.Blockchain.Kaspa.KaspaWalletd {
       }
     }
 
+    /// <summary>Field number for the "feePolicy" field.</summary>
+    public const int FeePolicyFieldNumber = 7;
+    private global::Miningcore.Blockchain.Kaspa.KaspaWalletd.FeePolicy feePolicy_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Miningcore.Blockchain.Kaspa.KaspaWalletd.FeePolicy FeePolicy {
+      get { return feePolicy_; }
+      set {
+        feePolicy_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
       return Equals(other as SendRequest);
@@ -2958,6 +3286,7 @@ namespace Miningcore.Blockchain.Kaspa.KaspaWalletd {
       if(!from_.Equals(other.from_)) return false;
       if (UseExistingChangeAddress != other.UseExistingChangeAddress) return false;
       if (IsSendAll != other.IsSendAll) return false;
+      if (!object.Equals(FeePolicy, other.FeePolicy)) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -2970,6 +3299,7 @@ namespace Miningcore.Blockchain.Kaspa.KaspaWalletd {
       hash ^= from_.GetHashCode();
       if (UseExistingChangeAddress != false) hash ^= UseExistingChangeAddress.GetHashCode();
       if (IsSendAll != false) hash ^= IsSendAll.GetHashCode();
+      if (feePolicy_ != null) hash ^= FeePolicy.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -3004,6 +3334,10 @@ namespace Miningcore.Blockchain.Kaspa.KaspaWalletd {
         output.WriteRawTag(48);
         output.WriteBool(IsSendAll);
       }
+      if (feePolicy_ != null) {
+        output.WriteRawTag(58);
+        output.WriteMessage(FeePolicy);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -3027,6 +3361,9 @@ namespace Miningcore.Blockchain.Kaspa.KaspaWalletd {
       }
       if (IsSendAll != false) {
         size += 1 + 1;
+      }
+      if (feePolicy_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(FeePolicy);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -3054,6 +3391,12 @@ namespace Miningcore.Blockchain.Kaspa.KaspaWalletd {
       }
       if (other.IsSendAll != false) {
         IsSendAll = other.IsSendAll;
+      }
+      if (other.feePolicy_ != null) {
+        if (feePolicy_ == null) {
+          FeePolicy = new global::Miningcore.Blockchain.Kaspa.KaspaWalletd.FeePolicy();
+        }
+        FeePolicy.MergeFrom(other.FeePolicy);
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -3088,6 +3431,13 @@ namespace Miningcore.Blockchain.Kaspa.KaspaWalletd {
           }
           case 48: {
             IsSendAll = input.ReadBool();
+            break;
+          }
+          case 58: {
+            if (feePolicy_ == null) {
+              FeePolicy = new global::Miningcore.Blockchain.Kaspa.KaspaWalletd.FeePolicy();
+            }
+            input.ReadMessage(FeePolicy);
             break;
           }
         }
@@ -3502,6 +3852,619 @@ namespace Miningcore.Blockchain.Kaspa.KaspaWalletd {
             break;
           case 10: {
             signedTransactions_.AddEntriesFrom(input, _repeated_signedTransactions_codec);
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  public sealed partial class GetVersionRequest : pb::IMessage<GetVersionRequest> {
+    private static readonly pb::MessageParser<GetVersionRequest> _parser = new pb::MessageParser<GetVersionRequest>(() => new GetVersionRequest());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<GetVersionRequest> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Miningcore.Blockchain.Kaspa.KaspaWalletd.KaspawalletdReflection.Descriptor.MessageTypes[24]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public GetVersionRequest() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public GetVersionRequest(GetVersionRequest other) : this() {
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public GetVersionRequest Clone() {
+      return new GetVersionRequest(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as GetVersionRequest);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(GetVersionRequest other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(GetVersionRequest other) {
+      if (other == null) {
+        return;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+        }
+      }
+    }
+
+  }
+
+  public sealed partial class GetVersionResponse : pb::IMessage<GetVersionResponse> {
+    private static readonly pb::MessageParser<GetVersionResponse> _parser = new pb::MessageParser<GetVersionResponse>(() => new GetVersionResponse());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<GetVersionResponse> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Miningcore.Blockchain.Kaspa.KaspaWalletd.KaspawalletdReflection.Descriptor.MessageTypes[25]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public GetVersionResponse() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public GetVersionResponse(GetVersionResponse other) : this() {
+      version_ = other.version_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public GetVersionResponse Clone() {
+      return new GetVersionResponse(this);
+    }
+
+    /// <summary>Field number for the "version" field.</summary>
+    public const int VersionFieldNumber = 1;
+    private string version_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+
+    public string Version {
+      get { return version_; }
+      set {
+        version_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as GetVersionResponse);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(GetVersionResponse other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Version != other.Version) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Version.Length != 0) hash ^= Version.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (Version.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(Version);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (Version.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Version);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(GetVersionResponse other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Version.Length != 0) {
+        Version = other.Version;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            Version = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  public sealed partial class BumpFeeRequest : pb::IMessage<BumpFeeRequest> {
+    private static readonly pb::MessageParser<BumpFeeRequest> _parser = new pb::MessageParser<BumpFeeRequest>(() => new BumpFeeRequest());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<BumpFeeRequest> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Miningcore.Blockchain.Kaspa.KaspaWalletd.KaspawalletdReflection.Descriptor.MessageTypes[26]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public BumpFeeRequest() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public BumpFeeRequest(BumpFeeRequest other) : this() {
+      password_ = other.password_;
+      from_ = other.from_.Clone();
+      useExistingChangeAddress_ = other.useExistingChangeAddress_;
+      feePolicy_ = other.feePolicy_ != null ? other.feePolicy_.Clone() : null;
+      txID_ = other.txID_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public BumpFeeRequest Clone() {
+      return new BumpFeeRequest(this);
+    }
+
+    /// <summary>Field number for the "password" field.</summary>
+    public const int PasswordFieldNumber = 1;
+    private string password_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public string Password {
+      get { return password_; }
+      set {
+        password_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "from" field.</summary>
+    public const int FromFieldNumber = 2;
+    private static readonly pb::FieldCodec<string> _repeated_from_codec
+        = pb::FieldCodec.ForString(18);
+    private readonly pbc::RepeatedField<string> from_ = new pbc::RepeatedField<string>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pbc::RepeatedField<string> From {
+      get { return from_; }
+    }
+
+    /// <summary>Field number for the "useExistingChangeAddress" field.</summary>
+    public const int UseExistingChangeAddressFieldNumber = 3;
+    private bool useExistingChangeAddress_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool UseExistingChangeAddress {
+      get { return useExistingChangeAddress_; }
+      set {
+        useExistingChangeAddress_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "feePolicy" field.</summary>
+    public const int FeePolicyFieldNumber = 4;
+    private global::Miningcore.Blockchain.Kaspa.KaspaWalletd.FeePolicy feePolicy_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Miningcore.Blockchain.Kaspa.KaspaWalletd.FeePolicy FeePolicy {
+      get { return feePolicy_; }
+      set {
+        feePolicy_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "txID" field.</summary>
+    public const int TxIDFieldNumber = 5;
+    private string txID_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public string TxID {
+      get { return txID_; }
+      set {
+        txID_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as BumpFeeRequest);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+
+    public bool Equals(BumpFeeRequest other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Password != other.Password) return false;
+      if(!from_.Equals(other.from_)) return false;
+      if (UseExistingChangeAddress != other.UseExistingChangeAddress) return false;
+      if (!object.Equals(FeePolicy, other.FeePolicy)) return false;
+      if (TxID != other.TxID) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Password.Length != 0) hash ^= Password.GetHashCode();
+      hash ^= from_.GetHashCode();
+      if (UseExistingChangeAddress != false) hash ^= UseExistingChangeAddress.GetHashCode();
+      if (feePolicy_ != null) hash ^= FeePolicy.GetHashCode();
+      if (TxID.Length != 0) hash ^= TxID.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (Password.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(Password);
+      }
+      from_.WriteTo(output, _repeated_from_codec);
+      if (UseExistingChangeAddress != false) {
+        output.WriteRawTag(24);
+        output.WriteBool(UseExistingChangeAddress);
+      }
+      if (feePolicy_ != null) {
+        output.WriteRawTag(34);
+        output.WriteMessage(FeePolicy);
+      }
+      if (TxID.Length != 0) {
+        output.WriteRawTag(42);
+        output.WriteString(TxID);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (Password.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Password);
+      }
+      size += from_.CalculateSize(_repeated_from_codec);
+      if (UseExistingChangeAddress != false) {
+        size += 1 + 1;
+      }
+      if (feePolicy_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(FeePolicy);
+      }
+      if (TxID.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(TxID);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(BumpFeeRequest other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Password.Length != 0) {
+        Password = other.Password;
+      }
+      from_.Add(other.from_);
+      if (other.UseExistingChangeAddress != false) {
+        UseExistingChangeAddress = other.UseExistingChangeAddress;
+      }
+      if (other.feePolicy_ != null) {
+        if (feePolicy_ == null) {
+          FeePolicy = new global::Miningcore.Blockchain.Kaspa.KaspaWalletd.FeePolicy();
+        }
+        FeePolicy.MergeFrom(other.FeePolicy);
+      }
+      if (other.TxID.Length != 0) {
+        TxID = other.TxID;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            Password = input.ReadString();
+            break;
+          }
+          case 18: {
+            from_.AddEntriesFrom(input, _repeated_from_codec);
+            break;
+          }
+          case 24: {
+            UseExistingChangeAddress = input.ReadBool();
+            break;
+          }
+          case 34: {
+            if (feePolicy_ == null) {
+              FeePolicy = new global::Miningcore.Blockchain.Kaspa.KaspaWalletd.FeePolicy();
+            }
+            input.ReadMessage(FeePolicy);
+            break;
+          }
+          case 42: {
+            TxID = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  public sealed partial class BumpFeeResponse : pb::IMessage<BumpFeeResponse> {
+    private static readonly pb::MessageParser<BumpFeeResponse> _parser = new pb::MessageParser<BumpFeeResponse>(() => new BumpFeeResponse());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<BumpFeeResponse> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Miningcore.Blockchain.Kaspa.KaspaWalletd.KaspawalletdReflection.Descriptor.MessageTypes[27]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public BumpFeeResponse() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public BumpFeeResponse(BumpFeeResponse other) : this() {
+      transactions_ = other.transactions_.Clone();
+      txIDs_ = other.txIDs_.Clone();
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public BumpFeeResponse Clone() {
+      return new BumpFeeResponse(this);
+    }
+
+    /// <summary>Field number for the "transactions" field.</summary>
+    public const int TransactionsFieldNumber = 1;
+    private static readonly pb::FieldCodec<pb::ByteString> _repeated_transactions_codec
+        = pb::FieldCodec.ForBytes(10);
+    private readonly pbc::RepeatedField<pb::ByteString> transactions_ = new pbc::RepeatedField<pb::ByteString>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public pbc::RepeatedField<pb::ByteString> Transactions {
+      get { return transactions_; }
+    }
+
+    /// <summary>Field number for the "txIDs" field.</summary>
+    public const int TxIDsFieldNumber = 2;
+    private static readonly pb::FieldCodec<string> _repeated_txIDs_codec
+        = pb::FieldCodec.ForString(18);
+    private readonly pbc::RepeatedField<string> txIDs_ = new pbc::RepeatedField<string>();
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+
+    public pbc::RepeatedField<string> TxIDs {
+      get { return txIDs_; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as BumpFeeResponse);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(BumpFeeResponse other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if(!transactions_.Equals(other.transactions_)) return false;
+      if(!txIDs_.Equals(other.txIDs_)) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      hash ^= transactions_.GetHashCode();
+      hash ^= txIDs_.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      transactions_.WriteTo(output, _repeated_transactions_codec);
+      txIDs_.WriteTo(output, _repeated_txIDs_codec);
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      size += transactions_.CalculateSize(_repeated_transactions_codec);
+      size += txIDs_.CalculateSize(_repeated_txIDs_codec);
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(BumpFeeResponse other) {
+      if (other == null) {
+        return;
+      }
+      transactions_.Add(other.transactions_);
+      txIDs_.Add(other.txIDs_);
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            transactions_.AddEntriesFrom(input, _repeated_transactions_codec);
+            break;
+          }
+          case 18: {
+            txIDs_.AddEntriesFrom(input, _repeated_txIDs_codec);
             break;
           }
         }

@@ -56,12 +56,13 @@ public class KaspaXoShiRo256PlusPlus
 public class KaspaJob
 {
     protected IMasterClock clock;
-    public kaspad.RpcBlock BlockTemplate { get; private set; }
-    public double Difficulty { get; private set; }
+    protected double shareMultiplier;
+    public kaspad.RpcBlock BlockTemplate { get; protected set; }
+    public double Difficulty { get; protected set; }
     public string JobId { get; protected set; }
     public uint256 blockTargetValue { get; protected set; }
     
-    private object[] jobParams;
+    protected object[] jobParams;
     private readonly ConcurrentDictionary<string, bool> submissions = new(StringComparer.OrdinalIgnoreCase);
 
     protected IHashAlgorithm blockHeaderHasher;
@@ -200,7 +201,7 @@ public class KaspaJob
         }
     }
     
-    protected virtual Span<byte> SerializeHeader(kaspad.RpcBlockHeader header, bool isPrePow = true, bool isLittleEndian = false)
+    protected virtual Span<byte> SerializeHeader(kaspad.RpcBlockHeader header, bool isPrePow = true)
     {
         ulong nonce = isPrePow ? 0 : header.Nonce;
         long timestamp = isPrePow ? 0 : header.Timestamp;
@@ -209,14 +210,14 @@ public class KaspaJob
         
         using(var stream = new MemoryStream())
         {
-            var versionBytes = (isLittleEndian) ? BitConverter.GetBytes((ushort) header.Version).ReverseInPlace() : BitConverter.GetBytes((ushort) header.Version);
+            var versionBytes = (!BitConverter.IsLittleEndian) ? BitConverter.GetBytes((ushort) header.Version).ReverseInPlace() : BitConverter.GetBytes((ushort) header.Version);
             stream.Write(versionBytes);
-            var parentsBytes = (isLittleEndian) ? BitConverter.GetBytes((ulong) header.Parents.Count).ReverseInPlace() : BitConverter.GetBytes((ulong) header.Parents.Count);
+            var parentsBytes = (!BitConverter.IsLittleEndian) ? BitConverter.GetBytes((ulong) header.Parents.Count).ReverseInPlace() : BitConverter.GetBytes((ulong) header.Parents.Count);
             stream.Write(parentsBytes);
             
             foreach (var parent in header.Parents)
             {
-                var parentHashesBytes = (isLittleEndian) ? BitConverter.GetBytes((ulong) parent.ParentHashes.Count).ReverseInPlace() : BitConverter.GetBytes((ulong) parent.ParentHashes.Count);
+                var parentHashesBytes = (!BitConverter.IsLittleEndian) ? BitConverter.GetBytes((ulong) parent.ParentHashes.Count).ReverseInPlace() : BitConverter.GetBytes((ulong) parent.ParentHashes.Count);
                 stream.Write(parentHashesBytes);
                 
                 foreach (var parentHash in parent.ParentHashes)
@@ -229,21 +230,21 @@ public class KaspaJob
             stream.Write(header.AcceptedIdMerkleRoot.HexToByteArray());
             stream.Write(header.UtxoCommitment.HexToByteArray());
             
-            var timestampBytes = (isLittleEndian) ? BitConverter.GetBytes((ulong) timestamp).ReverseInPlace() : BitConverter.GetBytes((ulong) timestamp);
+            var timestampBytes = (!BitConverter.IsLittleEndian) ? BitConverter.GetBytes((ulong) timestamp).ReverseInPlace() : BitConverter.GetBytes((ulong) timestamp);
             stream.Write(timestampBytes);
-            var bitsBytes = (isLittleEndian) ? BitConverter.GetBytes(header.Bits).ReverseInPlace() : BitConverter.GetBytes(header.Bits);
+            var bitsBytes = (!BitConverter.IsLittleEndian) ? BitConverter.GetBytes(header.Bits).ReverseInPlace() : BitConverter.GetBytes(header.Bits);
             stream.Write(bitsBytes);
-            var nonceBytes = (isLittleEndian) ? BitConverter.GetBytes(nonce).ReverseInPlace() : BitConverter.GetBytes(nonce);
+            var nonceBytes = (!BitConverter.IsLittleEndian) ? BitConverter.GetBytes(nonce).ReverseInPlace() : BitConverter.GetBytes(nonce);
             stream.Write(nonceBytes);
-            var daaScoreBytes = (isLittleEndian) ? BitConverter.GetBytes(header.DaaScore).ReverseInPlace() : BitConverter.GetBytes(header.DaaScore);
+            var daaScoreBytes = (!BitConverter.IsLittleEndian) ? BitConverter.GetBytes(header.DaaScore).ReverseInPlace() : BitConverter.GetBytes(header.DaaScore);
             stream.Write(daaScoreBytes);
-            var blueScoreBytes = (isLittleEndian) ? BitConverter.GetBytes(header.BlueScore).ReverseInPlace() : BitConverter.GetBytes(header.BlueScore);
+            var blueScoreBytes = (!BitConverter.IsLittleEndian) ? BitConverter.GetBytes(header.BlueScore).ReverseInPlace() : BitConverter.GetBytes(header.BlueScore);
             stream.Write(blueScoreBytes);
             
             var blueWork = header.BlueWork.PadLeft(header.BlueWork.Length + (header.BlueWork.Length % 2), '0');
             var blueWorkBytes = blueWork.HexToByteArray();
             
-            var blueWorkLengthBytes = (isLittleEndian) ? BitConverter.GetBytes((ulong) blueWorkBytes.Length).ReverseInPlace() : BitConverter.GetBytes((ulong) blueWorkBytes.Length);
+            var blueWorkLengthBytes = (!BitConverter.IsLittleEndian) ? BitConverter.GetBytes((ulong) blueWorkBytes.Length).ReverseInPlace() : BitConverter.GetBytes((ulong) blueWorkBytes.Length);
             stream.Write(blueWorkLengthBytes);
             stream.Write(blueWorkBytes);
             
@@ -255,14 +256,14 @@ public class KaspaJob
         }
     }
 
-    protected virtual (string, ulong[]) SerializeJobParamsData(Span<byte> prePowHash, bool isLittleEndian = false)
+    protected virtual (string, ulong[]) SerializeJobParamsData(Span<byte> prePowHash)
     {
         ulong[] preHashU64s = new ulong[4];
         string preHashStrings = "";
         
         for (int i = 0; i < 4; i++)
         {
-            var slice = (isLittleEndian) ? prePowHash.Slice(i * 8, 8).ToNewReverseArray() : prePowHash.Slice(i * 8, 8);
+            var slice = prePowHash.Slice(i * 8, 8);
             
             preHashStrings += slice.ToHexString().PadLeft(16, '0');
             preHashU64s[i] = BitConverter.ToUInt64(slice);
@@ -274,24 +275,21 @@ public class KaspaJob
     protected virtual Share ProcessShareInternal(StratumConnection worker, string nonce)
     {
         var context = worker.ContextAs<KaspaWorkerContext>();
-        
+
         BlockTemplate.Header.Nonce = Convert.ToUInt64(nonce, 16);
-        
+
         var prePowHashBytes = SerializeHeader(BlockTemplate.Header, true);
         var coinbaseBytes = SerializeCoinbase(prePowHashBytes, BlockTemplate.Header.Timestamp, BlockTemplate.Header.Nonce);
-        Span<byte> hashCoinbaseBytes = stackalloc byte[32];
 
-        if(shareHasher is not FishHashKarlsen)
-            shareHasher.Digest(ComputeCoinbase(prePowHashBytes, coinbaseBytes), hashCoinbaseBytes);
-        else
-            shareHasher.Digest(coinbaseBytes, hashCoinbaseBytes);
-        
+        Span<byte> hashCoinbaseBytes = stackalloc byte[32];
+        shareHasher.Digest(ComputeCoinbase(prePowHashBytes, coinbaseBytes), hashCoinbaseBytes);
+
         var targetHashCoinbaseBytes = new Target(new BigInteger(hashCoinbaseBytes.ToNewReverseArray(), true, true));
         var hashCoinbaseBytesValue = targetHashCoinbaseBytes.ToUInt256();
-        //throw new StratumException(StratumError.LowDifficultyShare, $"nonce: {nonce} ||| BigInteger: {targetHashCoinbaseBytes.ToBigInteger()} ||| Target: {hashCoinbaseBytesValue} - [stratum: {KaspaUtils.DifficultyToTarget(context.Difficulty)} - blockTemplate: {blockTargetValue}] ||| BigToCompact: {KaspaUtils.BigToCompact(targetHashCoinbaseBytes.ToBigInteger())} - [stratum: {KaspaUtils.BigToCompact(KaspaUtils.DifficultyToTarget(context.Difficulty))} - blockTemplate: {BlockTemplate.Header.Bits}] ||| shareDiff: {(double) new BigRational(KaspaConstants.Diff1b, targetHashCoinbaseBytes.ToBigInteger()) * (double) KaspaConstants.MinHash / KaspaConstants.ShareMultiplier} - [stratum: {context.Difficulty} - blockTemplate: {KaspaUtils.TargetToDifficulty(KaspaUtils.CompactToBig(BlockTemplate.Header.Bits)) * (double) KaspaConstants.MinHash / KaspaConstants.ShareMultiplier}] ||| AdjustShareDifficulty: {(double) new BigRational(KaspaConstants.Diff1b, targetHashCoinbaseBytes.ToBigInteger()) * KaspaConstants.Pow2xDiff1TargetNumZero * (double) KaspaConstants.MinHash / KaspaConstants.ShareMultiplier} - [stratum: {context.Difficulty * KaspaConstants.Pow2xDiff1TargetNumZero * (double) KaspaConstants.MinHash / KaspaConstants.ShareMultiplier}]");
-        
+        //throw new StratumException(StratumError.LowDifficultyShare, $"nonce: {nonce} ||| hashCoinbaseBytes: {hashCoinbaseBytes.ToHexString()} ||| BigInteger: {targetHashCoinbaseBytes.ToBigInteger()} ||| Target: {hashCoinbaseBytesValue} - [stratum: {KaspaUtils.DifficultyToTarget(context.Difficulty)} - blockTemplate: {blockTargetValue}] ||| BigToCompact: {KaspaUtils.BigToCompact(targetHashCoinbaseBytes.ToBigInteger())} - [stratum: {KaspaUtils.BigToCompact(KaspaUtils.DifficultyToTarget(context.Difficulty))} - blockTemplate: {BlockTemplate.Header.Bits}] ||| shareDiff: {(double) new BigRational(KaspaConstants.Diff1b, targetHashCoinbaseBytes.ToBigInteger()) * shareMultiplier} - [stratum: {context.Difficulty} - blockTemplate: {KaspaUtils.TargetToDifficulty(KaspaUtils.CompactToBig(BlockTemplate.Header.Bits)) * (double) KaspaConstants.MinHash}]");
+
         // calc share-diff
-        var shareDiff = (double) new BigRational(KaspaConstants.Diff1b, targetHashCoinbaseBytes.ToBigInteger()) * KaspaConstants.Pow2xDiff1TargetNumZero * (double) KaspaConstants.MinHash / KaspaConstants.ShareMultiplier;
+        var shareDiff = (double) new BigRational(KaspaConstants.Diff1b, targetHashCoinbaseBytes.ToBigInteger()) * shareMultiplier;
 
         // diff check
         var stratumDifficulty = context.Difficulty;
@@ -324,7 +322,7 @@ public class KaspaJob
         {
             BlockHeight = (long) BlockTemplate.Header.DaaScore,
             NetworkDifficulty = Difficulty,
-            Difficulty = context.Difficulty / KaspaConstants.ShareMultiplier
+            Difficulty = context.Difficulty / shareMultiplier
         };
 
         if(isBlockCandidate)
@@ -366,14 +364,16 @@ public class KaspaJob
         return ProcessShareInternal(worker, nonce);
     }
 
-    public void Init(kaspad.RpcBlock blockTemplate, string jobId)
+    public virtual void Init(kaspad.RpcBlock blockTemplate, string jobId, double shareMultiplier)
     {
         Contract.RequiresNonNull(blockTemplate);
         Contract.RequiresNonNull(jobId);
         
         JobId = jobId;
+        this.shareMultiplier = shareMultiplier;
+
         var target = new Target(KaspaUtils.CompactToBig(blockTemplate.Header.Bits));
-        Difficulty = KaspaUtils.TargetToDifficulty(target.ToBigInteger()) * (double) KaspaConstants.MinHash / KaspaConstants.ShareMultiplier;
+        Difficulty = KaspaUtils.TargetToDifficulty(target.ToBigInteger()) * (double) KaspaConstants.MinHash;
         blockTargetValue = target.ToUInt256();
         BlockTemplate = blockTemplate;
         

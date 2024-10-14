@@ -145,7 +145,7 @@ namespace Miningcore.Blockchain.Kaspa.Kaspad {
             new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.Kaspad.AddressesMessage), global::Miningcore.Blockchain.Kaspa.Kaspad.AddressesMessage.Parser, new[]{ "AddressList" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.Kaspad.NetAddress), global::Miningcore.Blockchain.Kaspa.Kaspad.NetAddress.Parser, new[]{ "Timestamp", "Ip", "Port" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.Kaspad.SubnetworkId), global::Miningcore.Blockchain.Kaspa.Kaspad.SubnetworkId.Parser, new[]{ "Bytes" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.Kaspad.TransactionMessage), global::Miningcore.Blockchain.Kaspa.Kaspad.TransactionMessage.Parser, new[]{ "Version", "Inputs", "Outputs", "LockTime", "SubnetworkId", "Gas", "Payload" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.Kaspad.TransactionMessage), global::Miningcore.Blockchain.Kaspa.Kaspad.TransactionMessage.Parser, new[]{ "Version", "Inputs", "Outputs", "LockTime", "SubnetworkId", "Gas", "Payload", "Mass" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.Kaspad.TransactionInput), global::Miningcore.Blockchain.Kaspa.Kaspad.TransactionInput.Parser, new[]{ "PreviousOutpoint", "SignatureScript", "Sequence", "SigOpCount" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.Kaspad.Outpoint), global::Miningcore.Blockchain.Kaspa.Kaspad.Outpoint.Parser, new[]{ "TransactionId", "Index" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.Kaspad.TransactionId), global::Miningcore.Blockchain.Kaspa.Kaspad.TransactionId.Parser, new[]{ "Bytes" }, null, null, null, null),
@@ -837,6 +837,7 @@ namespace Miningcore.Blockchain.Kaspa.Kaspad {
       subnetworkId_ = other.subnetworkId_ != null ? other.subnetworkId_.Clone() : null;
       gas_ = other.gas_;
       payload_ = other.payload_;
+      mass_ = other.mass_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -920,6 +921,17 @@ namespace Miningcore.Blockchain.Kaspa.Kaspad {
       }
     }
 
+    /// <summary>Field number for the "mass" field.</summary>
+    public const int MassFieldNumber = 9;
+    private ulong mass_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public ulong Mass {
+      get { return mass_; }
+      set {
+        mass_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
       return Equals(other as TransactionMessage);
@@ -940,6 +952,7 @@ namespace Miningcore.Blockchain.Kaspa.Kaspad {
       if (!object.Equals(SubnetworkId, other.SubnetworkId)) return false;
       if (Gas != other.Gas) return false;
       if (Payload != other.Payload) return false;
+      if (Mass != other.Mass) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -953,6 +966,7 @@ namespace Miningcore.Blockchain.Kaspa.Kaspad {
       if (subnetworkId_ != null) hash ^= SubnetworkId.GetHashCode();
       if (Gas != 0UL) hash ^= Gas.GetHashCode();
       if (Payload.Length != 0) hash ^= Payload.GetHashCode();
+      if (Mass != 0UL) hash ^= Mass.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -988,6 +1002,10 @@ namespace Miningcore.Blockchain.Kaspa.Kaspad {
         output.WriteRawTag(66);
         output.WriteBytes(Payload);
       }
+      if (Mass != 0UL) {
+        output.WriteRawTag(72);
+        output.WriteUInt64(Mass);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -1012,6 +1030,9 @@ namespace Miningcore.Blockchain.Kaspa.Kaspad {
       }
       if (Payload.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeBytesSize(Payload);
+      }
+      if (Mass != 0UL) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt64Size(Mass);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -1043,6 +1064,9 @@ namespace Miningcore.Blockchain.Kaspa.Kaspad {
       }
       if (other.Payload.Length != 0) {
         Payload = other.Payload;
+      }
+      if (other.Mass != 0UL) {
+        Mass = other.Mass;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -1084,6 +1108,10 @@ namespace Miningcore.Blockchain.Kaspa.Kaspad {
           }
           case 66: {
             Payload = input.ReadBytes();
+            break;
+          }
+          case 72: {
+            Mass = input.ReadUInt64();
             break;
           }
         }

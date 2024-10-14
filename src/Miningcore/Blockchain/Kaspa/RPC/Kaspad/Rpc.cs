@@ -262,7 +262,7 @@ namespace Miningcore.Blockchain.Kaspa.Kaspad {
             new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.Kaspad.RpcBlockHeader), global::Miningcore.Blockchain.Kaspa.Kaspad.RpcBlockHeader.Parser, new[]{ "Version", "Parents", "HashMerkleRoot", "AcceptedIdMerkleRoot", "UtxoCommitment", "Timestamp", "Bits", "Nonce", "DaaScore", "BlueWork", "PruningPoint", "BlueScore" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.Kaspad.RpcBlockLevelParents), global::Miningcore.Blockchain.Kaspa.Kaspad.RpcBlockLevelParents.Parser, new[]{ "ParentHashes" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.Kaspad.RpcBlockVerboseData), global::Miningcore.Blockchain.Kaspa.Kaspad.RpcBlockVerboseData.Parser, new[]{ "Hash", "Difficulty", "SelectedParentHash", "TransactionIds", "IsHeaderOnly", "BlueScore", "ChildrenHashes", "MergeSetBluesHashes", "MergeSetRedsHashes", "IsChainBlock" }, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.Kaspad.RpcTransaction), global::Miningcore.Blockchain.Kaspa.Kaspad.RpcTransaction.Parser, new[]{ "Version", "Inputs", "Outputs", "LockTime", "SubnetworkId", "Gas", "Payload", "VerboseData" }, null, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.Kaspad.RpcTransaction), global::Miningcore.Blockchain.Kaspa.Kaspad.RpcTransaction.Parser, new[]{ "Version", "Inputs", "Outputs", "LockTime", "SubnetworkId", "Gas", "Payload", "VerboseData", "Mass" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.Kaspad.RpcTransactionInput), global::Miningcore.Blockchain.Kaspa.Kaspad.RpcTransactionInput.Parser, new[]{ "PreviousOutpoint", "SignatureScript", "Sequence", "SigOpCount", "VerboseData" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.Kaspad.RpcScriptPublicKey), global::Miningcore.Blockchain.Kaspa.Kaspad.RpcScriptPublicKey.Parser, new[]{ "Version", "ScriptPublicKey" }, null, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Miningcore.Blockchain.Kaspa.Kaspad.RpcTransactionOutput), global::Miningcore.Blockchain.Kaspa.Kaspad.RpcTransactionOutput.Parser, new[]{ "Amount", "ScriptPublicKey", "VerboseData" }, null, null, null, null),
@@ -1626,6 +1626,7 @@ namespace Miningcore.Blockchain.Kaspa.Kaspad {
       gas_ = other.gas_;
       payload_ = other.payload_;
       verboseData_ = other.verboseData_ != null ? other.verboseData_.Clone() : null;
+      mass_ = other.mass_;
       _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
     }
 
@@ -1720,6 +1721,17 @@ namespace Miningcore.Blockchain.Kaspa.Kaspad {
       }
     }
 
+    /// <summary>Field number for the "mass" field.</summary>
+    public const int MassFieldNumber = 10;
+    private ulong mass_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public ulong Mass {
+      get { return mass_; }
+      set {
+        mass_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
       return Equals(other as RpcTransaction);
@@ -1741,6 +1753,7 @@ namespace Miningcore.Blockchain.Kaspa.Kaspad {
       if (Gas != other.Gas) return false;
       if (Payload != other.Payload) return false;
       if (!object.Equals(VerboseData, other.VerboseData)) return false;
+      if (Mass != other.Mass) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
 
@@ -1755,6 +1768,7 @@ namespace Miningcore.Blockchain.Kaspa.Kaspad {
       if (Gas != 0UL) hash ^= Gas.GetHashCode();
       if (Payload.Length != 0) hash ^= Payload.GetHashCode();
       if (verboseData_ != null) hash ^= VerboseData.GetHashCode();
+      if (Mass != 0UL) hash ^= Mass.GetHashCode();
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
       }
@@ -1794,6 +1808,10 @@ namespace Miningcore.Blockchain.Kaspa.Kaspad {
         output.WriteRawTag(74);
         output.WriteMessage(VerboseData);
       }
+      if (Mass != 0UL) {
+        output.WriteRawTag(80);
+        output.WriteUInt64(Mass);
+      }
       if (_unknownFields != null) {
         _unknownFields.WriteTo(output);
       }
@@ -1821,6 +1839,9 @@ namespace Miningcore.Blockchain.Kaspa.Kaspad {
       }
       if (verboseData_ != null) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(VerboseData);
+      }
+      if (Mass != 0UL) {
+        size += 1 + pb::CodedOutputStream.ComputeUInt64Size(Mass);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -1855,6 +1876,9 @@ namespace Miningcore.Blockchain.Kaspa.Kaspad {
           VerboseData = new global::Miningcore.Blockchain.Kaspa.Kaspad.RpcTransactionVerboseData();
         }
         VerboseData.MergeFrom(other.VerboseData);
+      }
+      if (other.Mass != 0UL) {
+        Mass = other.Mass;
       }
       _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
     }
@@ -1900,6 +1924,10 @@ namespace Miningcore.Blockchain.Kaspa.Kaspad {
               VerboseData = new global::Miningcore.Blockchain.Kaspa.Kaspad.RpcTransactionVerboseData();
             }
             input.ReadMessage(VerboseData);
+            break;
+          }
+          case 80: {
+            Mass = input.ReadUInt64();
             break;
           }
         }

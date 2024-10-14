@@ -14,6 +14,7 @@ using Miningcore.Blockchain.Handshake;
 using Miningcore.Blockchain.Kaspa;
 using Miningcore.Blockchain.Nexa;
 using Miningcore.Blockchain.Progpow;
+using Miningcore.Blockchain.Warthog;
 using Miningcore.Configuration;
 using Miningcore.Crypto;
 using Miningcore.Crypto.Hashing.Equihash;
@@ -159,6 +160,10 @@ public class AutofacModule : Module
             .Keyed<IPayoutScheme>(PayoutScheme.PPLNS)
             .SingleInstance();
 
+        builder.RegisterType<PPLNSBFPaymentScheme>()
+            .Keyed<IPayoutScheme>(PayoutScheme.PPLNSBF)
+            .SingleInstance();
+
         builder.RegisterType<SOLOPaymentScheme>()
             .Keyed<IPayoutScheme>(PayoutScheme.SOLO)
             .SingleInstance();
@@ -209,6 +214,7 @@ public class AutofacModule : Module
 
         //////////////////////
         // Handshake
+
         builder.RegisterType<HandshakeJobManager>();
         
         //////////////////////
@@ -218,12 +224,18 @@ public class AutofacModule : Module
 
         //////////////////////
         // Nexa
+
         builder.RegisterType<NexaJobManager>();
         
         //////////////////////
         // Progpow
 
         builder.RegisterType<ProgpowJobManager>();
+
+        //////////////////////
+        // Warthog
+
+        builder.RegisterType<WarthogJobManager>();
 
         base.Load(builder);
     }

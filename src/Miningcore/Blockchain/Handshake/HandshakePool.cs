@@ -89,8 +89,6 @@ public class HandshakePool : PoolBase
                 context.SetDifficulty(staticDiff.Value);
 
                 logger.Info(() => $"[{connection.ConnectionId}] Setting static difficulty of {staticDiff.Value}");
-
-                await connection.NotifyAsync(BitcoinStratumMethods.SetDifficulty, new object[] { context.Difficulty });
             }
         }
 

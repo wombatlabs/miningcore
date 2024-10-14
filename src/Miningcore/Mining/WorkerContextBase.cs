@@ -34,6 +34,16 @@ public class WorkerContextBase
     public double? PreviousDifficulty { get; set; }
 
     /// <summary>
+    /// Usually a wallet address
+    /// </summary>
+    public virtual string Miner { get; set; }
+
+    /// <summary>
+    /// Arbitrary worker identififer for miners using multiple rigs
+    /// </summary>
+    public virtual string Worker { get; set; }
+
+    /// <summary>
     /// UserAgent reported by Stratum
     /// </summary>
     public string UserAgent

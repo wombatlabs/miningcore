@@ -78,3 +78,16 @@ public static class CryptonoteWalletCommands
     public const string SplitIntegratedAddress = "split_integrated_address";
     public const string Store = "store";
 }
+
+public enum SalviumTransactionType
+{
+    Unset = 0,
+    Miner = 1,
+    Protocol = 2,
+    Transfer = 3,
+    Convert = 4,
+    Burn = 5,
+    Stake = 6,
+    Return = 7,
+    Max = 7
+}

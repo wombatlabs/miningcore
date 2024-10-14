@@ -166,40 +166,63 @@ namespace cryptonote
   bool get_inputs_money_amount(const transaction& tx, uint64_t& money)
   {
     money = 0;
-    BOOST_FOREACH(const auto& in, tx.vin)
-    {
-      CHECKED_GET_SPECIFIC_VARIANT(in, const txin_to_key, tokey_in, false);
-      money += tokey_in.amount;
+    if (tx.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM) {
+      BOOST_FOREACH(const auto& in, tx.vin_salvium)
+      {
+        CHECKED_GET_SPECIFIC_VARIANT(in, const txin_salvium_key, tokey_in, false);
+        money += tokey_in.amount;
+      }
+    } else {
+      BOOST_FOREACH(const auto& in, tx.vin)
+      {
+        CHECKED_GET_SPECIFIC_VARIANT(in, const txin_to_key, tokey_in, false);
+        money += tokey_in.amount;
+      }
     }
     return true;
   }
   //---------------------------------------------------------------
   uint64_t get_block_height(const block& b)
   {
-    CHECK_AND_ASSERT_MES(b.miner_tx.vin.size() == 1, 0, "wrong miner tx in block: " << get_block_hash(b) << ", b.miner_tx.vin.size() != 1");
-    CHECKED_GET_SPECIFIC_VARIANT(b.miner_tx.vin[0], const txin_gen, coinbase_in, 0);
-    return coinbase_in.height;
+    if (b.miner_tx.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM) {
+      CHECK_AND_ASSERT_MES(b.miner_tx.vin_salvium.size() == 1, 0, "wrong miner tx in block: " << get_block_hash(b) << ", b.miner_tx.vin_salvium.size() != 1");
+      CHECKED_GET_SPECIFIC_VARIANT(b.miner_tx.vin_salvium[0], const txin_gen, coinbase_in, 0);
+      return coinbase_in.height;
+    } else {
+      CHECK_AND_ASSERT_MES(b.miner_tx.vin.size() == 1, 0, "wrong miner tx in block: " << get_block_hash(b) << ", b.miner_tx.vin.size() != 1");
+      CHECKED_GET_SPECIFIC_VARIANT(b.miner_tx.vin[0], const txin_gen, coinbase_in, 0);
+      return coinbase_in.height;
+    }
   }
   //---------------------------------------------------------------
   bool check_inputs_types_supported(const transaction& tx)
   {
-    BOOST_FOREACH(const auto& in, tx.vin)
-    {
-      if (tx.blob_type == BLOB_TYPE_CRYPTONOTE_ZEPHYR) {
-        CHECK_AND_ASSERT_MES(in.type() == typeid(txin_zephyr_key), false, "wrong variant type: "
-          << in.type().name() << ", expected " << typeid(txin_zephyr_key).name()
+    if (tx.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM) {
+      BOOST_FOREACH(const auto& in, tx.vin_salvium)
+      {
+        CHECK_AND_ASSERT_MES(in.type() == typeid(txin_salvium_key), false, "wrong variant type: "
+          << in.type().name() << ", expected " << typeid(txin_salvium_key).name()
           << ", in transaction id=" << get_transaction_hash(tx));
-      } else if (tx.blob_type == BLOB_TYPE_CRYPTONOTE_XHV) {
-        CHECK_AND_ASSERT_MES(in.type() == typeid(txin_to_key) || in.type() == typeid(txin_offshore) || in.type() == typeid(txin_onshore) || in.type() == typeid(txin_xasset), false, "wrong variant type: "
-			     << in.type().name() << ", expected " << typeid(txin_to_key).name()
-			     << "or " << typeid(txin_offshore).name()
-			     << "or " << typeid(txin_onshore).name()
-			     << "or " << typeid(txin_xasset).name()
-			     << ", in transaction id=" << get_transaction_hash(tx));        
-      } else {
-        CHECK_AND_ASSERT_MES(in.type() == typeid(txin_to_key), false, "wrong variant type: "
-          << in.type().name() << ", expected " << typeid(txin_to_key).name()
-          << ", in transaction id=" << get_transaction_hash(tx));
+      }
+    } else {
+      BOOST_FOREACH(const auto& in, tx.vin)
+      {
+        if (tx.blob_type == BLOB_TYPE_CRYPTONOTE_ZEPHYR) {
+          CHECK_AND_ASSERT_MES(in.type() == typeid(txin_zephyr_key), false, "wrong variant type: "
+            << in.type().name() << ", expected " << typeid(txin_zephyr_key).name()
+            << ", in transaction id=" << get_transaction_hash(tx));
+        } else if (tx.blob_type == BLOB_TYPE_CRYPTONOTE_XHV) {
+          CHECK_AND_ASSERT_MES(in.type() == typeid(txin_to_key) || in.type() == typeid(txin_offshore) || in.type() == typeid(txin_onshore) || in.type() == typeid(txin_xasset), false, "wrong variant type: "
+                               << in.type().name() << ", expected " << typeid(txin_to_key).name()
+                               << "or " << typeid(txin_offshore).name()
+                               << "or " << typeid(txin_onshore).name()
+                               << "or " << typeid(txin_xasset).name()
+                               << ", in transaction id=" << get_transaction_hash(tx));        
+        } else {
+          CHECK_AND_ASSERT_MES(in.type() == typeid(txin_to_key), false, "wrong variant type: "
+            << in.type().name() << ", expected " << typeid(txin_to_key).name()
+            << ", in transaction id=" << get_transaction_hash(tx));
+        }
       }
     }
     return true;
@@ -262,8 +285,8 @@ namespace cryptonote
     {
       std::stringstream ss;
       binary_archive<true> ba(ss);
-      const size_t inputs = t.vin.size();
-      const size_t outputs = t.blob_type == BLOB_TYPE_CRYPTONOTE_ZEPHYR ? t.vout_zephyr.size() : t.blob_type != BLOB_TYPE_CRYPTONOTE_XHV ? t.vout.size() : t.vout_xhv.size();
+      const size_t inputs = t.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM ? t.vin_salvium.size() : t.vin.size();
+      const size_t outputs = t.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM ? t.vout_salvium.size() : (t.blob_type == BLOB_TYPE_CRYPTONOTE_ZEPHYR ? t.vout_zephyr.size() : (t.blob_type != BLOB_TYPE_CRYPTONOTE_XHV ? t.vout.size() : t.vout_xhv.size()));
       bool r = tt.rct_signatures.serialize_rctsig_base(ba, inputs, outputs);
       CHECK_AND_ASSERT_MES(r, false, "Failed to serialize rct signatures base");
       cryptonote::get_blob_hash(ss.str(), hashes[1]);
@@ -278,10 +301,12 @@ namespace cryptonote
     {
       std::stringstream ss;
       binary_archive<true> ba(ss);
-      const size_t inputs = t.vin.size();
-      const size_t outputs = t.blob_type == BLOB_TYPE_CRYPTONOTE_ZEPHYR ? t.vout_zephyr.size() : t.blob_type != BLOB_TYPE_CRYPTONOTE_XHV ? t.vout.size() : t.vout_xhv.size();
+      const size_t inputs = t.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM ? t.vin_salvium.size() : t.vin.size();
+      const size_t outputs = t.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM ? t.vout_salvium.size() : (t.blob_type == BLOB_TYPE_CRYPTONOTE_ZEPHYR ? t.vout_zephyr.size() : (t.blob_type != BLOB_TYPE_CRYPTONOTE_XHV ? t.vout.size() : t.vout_xhv.size()));
       size_t mixin;
-      if (t.blob_type == BLOB_TYPE_CRYPTONOTE_ZEPHYR) {
+      if (t.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM) {
+        mixin = t.vin_salvium.empty() ? 0 : t.vin_salvium[0].type() == typeid(txin_salvium_key) ? boost::get<txin_salvium_key>(t.vin_salvium[0]).key_offsets.size() - 1 : 0;
+      } else if (t.blob_type == BLOB_TYPE_CRYPTONOTE_ZEPHYR) {
         mixin = t.vin.empty() ? 0 : t.vin[0].type() == typeid(txin_zephyr_key) ? boost::get<txin_zephyr_key>(t.vin[0]).key_offsets.size() - 1 : 0;
       } else if (t.blob_type == BLOB_TYPE_CRYPTONOTE_XHV) {
         mixin = t.vin.empty() ? 0 :
@@ -454,6 +479,12 @@ namespace cryptonote
     crypto::hash h = null_hash;
     size_t bl_sz = 0;
     get_transaction_hash(b.miner_tx, h, bl_sz);
+    if (b.blob_type == BLOB_TYPE_CRYPTONOTE_SALVIUM) {
+      txs_ids.push_back(h);
+      h = null_hash;
+      bl_sz = 0;
+      get_transaction_hash(b.protocol_tx, h, bl_sz);
+    }
     txs_ids.push_back(h);
     BOOST_FOREACH(auto& th, b.tx_hashes)
       txs_ids.push_back(th);

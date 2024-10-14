@@ -179,6 +179,9 @@
     <ClInclude Include="crypto\verus_clhash.h" />
     <ClInclude Include="crypto\verus_hash.h" />
     <ClInclude Include="sodium.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="stdint.h" />
+    <ClInclude Include="targetver.h" />
     <ClInclude Include="verushashverify.h" />
   </ItemGroup>
   <ItemGroup>
@@ -191,7 +194,9 @@
     <ClCompile Include="crypto\verus_clhash.cpp" />
     <ClCompile Include="crypto\verus_clhash_portable.cpp" />
     <ClCompile Include="crypto\verus_hash.cpp" />
+    <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="exports.cpp" />
+    <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="verushashverify.cpp" />
   </ItemGroup>
   <ItemGroup>

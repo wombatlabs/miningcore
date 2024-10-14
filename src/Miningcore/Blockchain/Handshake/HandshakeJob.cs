@@ -82,7 +82,7 @@ public class HandshakeJob
             transactionHashes.Add(transaction.TxId.HexToByteArray());
 
         // build merkle-root
-        merkleRoot = merkleTree.CreateRoot(headerHasher, transactionHashes);
+        merkleRoot = merkleTree.CreateRoot(coin.MerkleTreeHasherValue, transactionHashes);
     }
 
     protected virtual void BuildWitnessBranches()
@@ -95,7 +95,7 @@ public class HandshakeJob
             transactionHashes.Add(transaction.Hash.HexToByteArray());
 
         // build witness-root
-        witnessRoot = merkleTree.CreateRoot(headerHasher, transactionHashes);
+        witnessRoot = merkleTree.CreateRoot(coin.MerkleTreeHasherValue, transactionHashes);
     }
 
     protected virtual void BuildCoinbase()
@@ -131,7 +131,7 @@ public class HandshakeJob
             coinbaseInitialHex = coinbaseInitial.ToHexString();
 
             Span<byte> coinbaseInitialBytes = stackalloc byte[32];
-            headerHasher.Digest((Span<byte>) coinbaseInitial, coinbaseInitialBytes);
+            coinbaseHasher.Digest(coinbaseInitial, coinbaseInitialBytes);
 
             coinbaseMerkle = coinbaseInitialBytes.ToArray();
         }
@@ -150,14 +150,14 @@ public class HandshakeJob
             coinbaseFinalHex = coinbaseFinal.ToHexString();
 
             Span<byte> coinbaseFinalBytes = stackalloc byte[32];
-            headerHasher.Digest((Span<byte>) coinbaseFinal, coinbaseFinalBytes);
+            coinbaseHasher.Digest(coinbaseFinal, coinbaseFinalBytes);
 
             Span<byte> coinbaseMerklCoinbaseFinalBytes = stackalloc byte[coinbaseMerkle.Length + coinbaseFinalBytes.Length];
             coinbaseMerkle.CopyTo(coinbaseMerklCoinbaseFinalBytes);
             coinbaseFinalBytes.CopyTo(coinbaseMerklCoinbaseFinalBytes[coinbaseMerkle.Length..]);
 
             Span<byte> coinbaseBytes = stackalloc byte[32];
-            headerHasher.Digest(coinbaseMerklCoinbaseFinalBytes, coinbaseBytes);
+            coinbaseHasher.Digest(coinbaseMerklCoinbaseFinalBytes, coinbaseBytes);
 
             coinbaseWitness = coinbaseBytes.ToArray();
         }
@@ -546,7 +546,7 @@ public class HandshakeJob
         var shareBytes = SerializeShare(nonce, nTime, commitHashBytes);
 
         Span<byte> shareLeftBytes = stackalloc byte[64];
-        headerHasher.Digest(shareBytes, shareLeftBytes);
+        blockHasher.Digest(shareBytes, shareLeftBytes);
         
         var rightPaddingBytes = (Span<byte>) PaddingPreviousBlockWithTreeRoot(8);
         Span<byte> shareRightPaddingBytes = stackalloc byte[shareBytes.Length + rightPaddingBytes.Length];
@@ -554,7 +554,7 @@ public class HandshakeJob
         rightPaddingBytes.CopyTo(shareRightPaddingBytes[shareBytes.Length..]);
 
         Span<byte> shareRightBytes = stackalloc byte[32];
-        coinbaseHasher.Digest(shareRightPaddingBytes, shareRightBytes);
+        coin.ShareHasherValue.Digest(shareRightPaddingBytes, shareRightBytes);
         
         var centerPaddingBytes = (Span<byte>) PaddingPreviousBlockWithTreeRoot(32);
         Span<byte> shareLeftCenterPaddingHeaderRighthBytes = stackalloc byte[shareLeftBytes.Length + centerPaddingBytes.Length + shareRightBytes.Length];
@@ -563,7 +563,7 @@ public class HandshakeJob
         shareRightBytes.CopyTo(shareLeftCenterPaddingHeaderRighthBytes[(shareLeftBytes.Length + centerPaddingBytes.Length)..]);
         
         Span<byte> shareHashBytes = stackalloc byte[32];
-        headerHasher.Digest(shareLeftCenterPaddingHeaderRighthBytes, shareHashBytes);
+        blockHasher.Digest(shareLeftCenterPaddingHeaderRighthBytes, shareHashBytes);
 
         for (int i = 0; i < maskBytes.Length; i++)
             shareHashBytes[i] ^= maskBytes[i];

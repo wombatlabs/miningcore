@@ -8,12 +8,12 @@ public class CryptonoteWorkerContext : WorkerContextBase
     /// Usually a wallet address
     /// NOTE: May include paymentid (seperated by a dot .)
     /// </summary>
-    public string Miner { get; set; }
+    public override string Miner { get; set; }
 
     /// <summary>
     /// Arbitrary worker identififer for miners using multiple rigs
     /// </summary>
-    public string Worker { get; set; }
+    public override string Worker { get; set; }
 
     private List<CryptonoteWorkerJob> validJobs { get; } = new();
 

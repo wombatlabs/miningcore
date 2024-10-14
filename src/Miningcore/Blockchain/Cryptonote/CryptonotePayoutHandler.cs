@@ -144,9 +144,10 @@ public class CryptonotePayoutHandler : PayoutHandlerBase,
         decimal unlockedBalance = 0.0m;
         decimal balance = 0.0m;
 
-        // Not all Cryptonote coins are equal
+        // not all Cryptonote coins are equal
         switch(coin.Symbol)
         {
+            case "SAL":
             case "ZEPH":
                 var responseBalances = await rpcClientWallet.ExecuteAsync<GetBalancesResponse>(logger, CryptonoteWalletCommands.GetBalance, ct);
 
@@ -198,24 +199,56 @@ public class CryptonotePayoutHandler : PayoutHandlerBase,
         if(!await EnsureBalance(balances.Sum(x => x.Amount), coin, ct))
             return false;
 
-        // build request
-        var request = new TransferRequest
+        TransferRequest request;
+
+        // not all Cryptonote coins are equal
+        switch(coin.Symbol)
         {
-            Destinations = balances
-                .Where(x => x.Amount > 0)
-                .Select(x =>
+            case "SAL":
+                // build request
+                request = new TransferRequest
                 {
-                    ExtractAddressAndPaymentId(x.Address, out var address, out _);
+                    Destinations = balances
+                        .Where(x => x.Amount > 0)
+                        .Select(x =>
+                        {
+                            ExtractAddressAndPaymentId(x.Address, out var address, out _);
 
-                    return new TransferDestination
-                    {
-                        Address = address,
-                        Amount = (ulong) Math.Floor(x.Amount * coin.SmallestUnit)
-                    };
-                }).ToArray(),
+                            return new TransferDestination
+                            {
+                                Address = address,
+                                Amount = (ulong) Math.Floor(x.Amount * coin.SmallestUnit),
+                                AssetType = coin.Symbol
+                            };
+                        }).ToArray(),
 
-            GetTxKey = true
-        };
+                    TransactionType = (uint) SalviumTransactionType.Transfer,
+                    SourceAsset = coin.Symbol,
+                    DestinationAsset = coin.Symbol,
+                    GetTxKey = true
+                };
+                break;
+            default:
+                // build request
+                request = new TransferRequest
+                {
+                    Destinations = balances
+                        .Where(x => x.Amount > 0)
+                        .Select(x =>
+                        {
+                            ExtractAddressAndPaymentId(x.Address, out var address, out _);
+
+                            return new TransferDestination
+                            {
+                                Address = address,
+                                Amount = (ulong) Math.Floor(x.Amount * coin.SmallestUnit)
+                            };
+                        }).ToArray(),
+
+                    GetTxKey = true
+                };
+                break;
+        }
 
         if(request.Destinations.Length == 0)
             return true;
@@ -276,20 +309,50 @@ public class CryptonotePayoutHandler : PayoutHandlerBase,
         if(!await EnsureBalance(balance.Amount, coin, ct))
             return false;
 
-        // build request
-        var request = new TransferRequest
+        TransferRequest request;
+
+        // not all Cryptonote coins are equal
+        switch(coin.Symbol)
         {
-            Destinations = new[]
-            {
-                new TransferDestination
+            case "SAL":
+                // build request
+                request = new TransferRequest
                 {
-                    Address = address,
-                    Amount = (ulong) Math.Floor(balance.Amount * coin.SmallestUnit)
-                }
-            },
-            PaymentId = paymentId,
-            GetTxKey = true
-        };
+                    Destinations = new[]
+                    {
+                        new TransferDestination
+                        {
+                            Address = address,
+                            Amount = (ulong) Math.Floor(balance.Amount * coin.SmallestUnit),
+                            AssetType = coin.Symbol
+                        }
+                    },
+
+                    TransactionType = (uint) SalviumTransactionType.Transfer,
+                    PaymentId = paymentId,
+                    SourceAsset = coin.Symbol,
+                    DestinationAsset = coin.Symbol,
+                    GetTxKey = true
+                };
+                break;
+            default:
+                // build request
+                request = new TransferRequest
+                {
+                    Destinations = new[]
+                    {
+                        new TransferDestination
+                        {
+                            Address = address,
+                            Amount = (ulong) Math.Floor(balance.Amount * coin.SmallestUnit)
+                        }
+                    },
+
+                    PaymentId = paymentId,
+                    GetTxKey = true
+                };
+                break;
+        }
 
         if(!isIntegratedAddress)
             request.PaymentId = paymentId;
@@ -432,7 +495,7 @@ public class CryptonotePayoutHandler : PayoutHandlerBase,
                     block.Status = BlockStatus.Confirmed;
                     block.ConfirmationProgress = 1;
                     
-                    // Not all Cryptonote coins are equal
+                    // not all Cryptonote coins are equal
                     switch(coin.Symbol)
                     {
                         case "ZEPH":

@@ -1338,11 +1338,17 @@
         "twitter": "https://twitter.com/hns",
         "telegram": "https://t.me/handshake_hns",
         "discord": "https://handshake.org/discord",
+        "merkleTreeHasher": {
+            "hash": "blake2b"
+        },
         "coinbaseHasher": {
-            "hash": "sha3-256"
+            "hash": "blake2b"
         },
         "headerHasher": {
             "hash": "blake2b"
+        },
+        "shareHasher": {
+            "hash": "sha3-256"
         },
         "blockHasher": {
             "hash": "blake2b"
@@ -1462,6 +1468,35 @@
         "explorerBlockLink": "http://157.245.248.32:3000/#/block/$hash$",
         "explorerTxLink": "http://157.245.248.32:3000/#/tx/{0}",
         "explorerAccountLink": "http://157.245.248.32:3000/#/address/{0}"
+    },
+    "kylacoin": {
+        "name": "Kylacoin",
+        "symbol": "KCN",
+        "family": "bitcoin",
+        "website": "https://kylacoin.com/",
+        "market": "https://coinpaprika.com/coin/kcn-kylacoin",
+        "twitter": "https://twitter.com/kylacoin",
+        "telegram": "https://t.me/kylacoingroup",
+        "discord": "https://discord.gg/SHZr5zQVDT",
+        "coinbaseHasher": {
+            "hash": "sha3-256d"
+        },
+        "headerHasher": {
+            "hash": "flex"
+        },
+        "blockHasher": {
+            "hash": "reverse",
+            "args": [
+                {
+                    "hash": "sha3-256d"
+                }
+            ]
+        },
+        "payoutDecimalPlaces": 12,
+        "hasCoinbaseDevReward": true,
+        "explorerBlockLink": "https://kcnxp.com/block/$height$",
+        "explorerTxLink": "https://kcnxp.com/tx/{0}",
+        "explorerAccountLink": "https://kcnxp.com/address/{0}"
     },
     "lanacoin": {
         "name": "Lanacoin",
@@ -2520,9 +2555,9 @@
             "args": [ { "hash": "minotaurx" } ]
         },
         "isPseudoPoS": true,
-        "explorerBlockLink": "https://explorer.pulsarcoin.org/block/$height$",
-        "explorerTxLink": "https://explorer.pulsarcoin.org/tx/{0}",
-        "explorerAccountLink": "https://explorer.pulsarcoin.org/address/{0}"
+        "explorerBlockLink": "https://explorer.pulsarcoin.org/block/?blockheight=$height$",
+        "explorerTxLink": "https://explorer.pulsarcoin.org/tx/?txid={0}",
+        "explorerAccountLink": "https://explorer.pulsarcoin.org/address/?address={0}"
     },
     "vishai": {
         "name": "Vishai",
@@ -4019,7 +4054,7 @@
         "discord": "https://discord.com/invite/VRKMP2S",
         "networks": {
             "main": {
-                "diff1": "00000f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f",
+                "diff1": "0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f",
                 "solutionSize": 1344,
                 "solutionPreambleSize": 3,
                 "solver": {
@@ -4040,7 +4075,7 @@
                 "saplingTxVersionGroupId": 2301567109
             },
             "test": {
-                "diff1": "0007ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+                "diff1": "07ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
                 "solutionSize": 1344,
                 "solutionPreambleSize": 3,
                 "solver": {
@@ -4061,7 +4096,7 @@
                 "saplingTxVersionGroupId": 2301567109
             },
             "regtest": {
-                "diff1": "0007ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+                "diff1": "0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f",
                 "solutionSize": 1344,
                 "solutionPreambleSize": 3,
                 "solver": {
@@ -4664,6 +4699,33 @@
         "explorerBlockLink": "https://explorer.conceal.network/index.html?hash=$hash$#blockchain_block",
         "explorerTxLink": "https://explorer.conceal.network/index.html?hash={0}#blockchain_transaction"
     },
+    "salvium": {
+        "name": "Salvium",
+        "canonicalName": "Salvium",
+        "symbol": "SAL",
+        "family": "cryptonote",
+        "website": "https://salvium.io/",
+        "github": "https://github.com/salvium/salvium",
+        "market": "https://www.coingecko.com/en/coins/salvium",
+        "twitter": "https://x.com/salvium_io",
+        "telegram": "https://t.me/salviumprotocol",
+        "discord": "https://discord.com/invite/P3rrAjkyYs",
+        "hash": "randomx",
+        "hashVariant": 0,
+        "blobType": 15,
+        "smallestUnit": 100000000,
+        "addressPrefix": 4125464,
+        "addressPrefixTestnet": 364819224,
+        "addressPrefixStagenet": 345944856,
+        "addressPrefixIntegrated": 90108696,
+        "addressPrefixIntegratedTestnet": 55924667160,
+        "addressPrefixIntegratedStagenet": 65301033752,
+        "subAddressPrefix": 257880856,
+        "subAddressPrefixTestnet": 2778641176,
+        "subAddressPrefixStagenet": 12155007768,
+        "explorerBlockLink": "https://explorer.salvium.io/block/$height$",
+        "explorerTxLink": "https://explorer.salvium.io/tx/{0}"
+    },
     "zephyr": {
         "name": "Zephyr",
         "canonicalName": "Zephyr",
@@ -4880,6 +4942,60 @@
         "explorerTxLink": "https://explorer.alephium.org/transactions/{0}",
         "explorerAccountLink": "https://explorer.alephium.org/addresses/{0}"
     },
+    "astrix-network": {
+        "name": "Astrix Network",
+        "canonicalName": "Astrix Network",
+        "symbol": "AIX",
+        "family": "kaspa",
+        "website": "https://astrix-network.com/",
+        "market": "",
+        "twitter": "https://x.com/astrix_network",
+        "telegram": "https://t.me/astrix_network",
+        "discord": "https://discord.gg/cwfDZJ9dHx",
+        "addressBech32Prefix": "astrix",
+        "addressBech32PrefixDevnet": "astrixdev",
+        "addressBech32PrefixSimnet": "astrixsim",
+        "addressBech32PrefixTestnet": "astrixtest",
+        "explorerBlockLink": "https://explorer.astrix-network.com/blocks/$hash$",
+        "explorerTxLink": "https://explorer.astrix-network.com/txs/{0}",
+        "explorerAccountLink": "https://explorer.astrix-network.com/addresses/{0}"
+    },
+    "bitmeme": {
+        "name": "Bitmeme",
+        "canonicalName": "Bitmeme",
+        "symbol": "BTM",
+        "family": "kaspa",
+        "website": "https://bitmeme.site/",
+        "market": "https://coinmarketcap.com/currencies/kaspa/",
+        "twitter": "https://x.com/bitmemebtm",
+        "telegram": "https://t.me/bitmemebtm",
+        "discord": "https://discord.com/invite/f3ugpwfD",
+        "addressBech32Prefix": "btm",
+        "addressBech32PrefixDevnet": "btmdev",
+        "addressBech32PrefixSimnet": "btmsim",
+        "addressBech32PrefixTestnet": "btmtest",
+        "explorerBlockLink": "https://explorer.bitmeme.world/blocks/$hash$",
+        "explorerTxLink": "https://explorer.bitmeme.world/txs/{0}",
+        "explorerAccountLink": "https://explorer.bitmeme.world/addresses/{0}"
+    },
+    "brics": {
+        "name": "Brics",
+        "canonicalName": "Brics",
+        "symbol": "BRICS",
+        "family": "kaspa",
+        "website": "https://bricspro.site/",
+        "market": "https://coinmarketcap.com/currencies/kaspa/",
+        "twitter": "https://x.com/BricNetwor59084",
+        "telegram": "https://t.me/bricsnet",
+        "discord": "https://discord.com/invite/f3ugpwfD",
+        "addressBech32Prefix": "brics",
+        "addressBech32PrefixDevnet": "bricsdev",
+        "addressBech32PrefixSimnet": "bricssim",
+        "addressBech32PrefixTestnet": "bricstest",
+        "explorerBlockLink": "https://explorer.bricspro.site/blocks/$hash$",
+        "explorerTxLink": "https://explorer.bricspro.site/txs/{0}",
+        "explorerAccountLink": "https://explorer.bricspro.site/addresses/{0}"   
+    },
     "bugna": {
         "name": "Bugna Network",
         "canonicalName": "Bugna Network",
@@ -4890,9 +5006,31 @@
         "twitter": "https://twitter.com/bugnanetwork",
         "telegram": "",
         "discord": "https://discord.com/invite/YxDF2EMKTq",
+        "addressBech32Prefix": "bugna",
+        "addressBech32PrefixDevnet": "bugnadev",
+        "addressBech32PrefixSimnet": "bugnasim",
+        "addressBech32PrefixTestnet": "bugnatest",
         "explorerBlockLink": "https://explorer.bugna.org/blocks/$hash$",
         "explorerTxLink": "https://explorer.bugna.org/txs/{0}",
         "explorerAccountLink": "https://explorer.bugna.org/addresses/{0}"
+    },
+    "consensus": {
+        "name": "Consensus Network",
+        "canonicalName": "Consensus Network",
+        "symbol": "CSS",
+        "family": "kaspa",
+        "website": "https://consensus-network.com/",
+        "market": "",
+        "twitter": "https://twitter.com/Consensus_CSS",
+        "telegram": "https://t.me/consensus_network",
+        "discord": "",
+        "addressBech32Prefix": "consensus",
+        "addressBech32PrefixDevnet": "consensusdev",
+        "addressBech32PrefixSimnet": "consensussim",
+        "addressBech32PrefixTestnet": "consensustest",
+        "explorerBlockLink": "https://explorer.consensus-network.com/blocks/$hash$",
+        "explorerTxLink": "https://explorer.consensus-network.com/txs/{0}",
+        "explorerAccountLink": "https://explorer.consensus-network.com/addresses/{0}"
     },
     "hoosat": {
         "name": "Hoosat",
@@ -4904,6 +5042,10 @@
         "twitter": "https://twitter.com/HoosatNetwork",
         "telegram": "https://t.me/HoosatNetwork",
         "discord": "https://discord.com/invite/NzENEkxEqY",
+        "addressBech32Prefix": "hoosat",
+        "addressBech32PrefixDevnet": "htndev",
+        "addressBech32PrefixSimnet": "hoosatsim",
+        "addressBech32PrefixTestnet": "hoosattest",
         "explorerBlockLink": "https://explorer.hoosat.fi/blocks/$hash$",
         "explorerTxLink": "https://explorer.hoosat.fi/txs/{0}",
         "explorerAccountLink": "https://explorer.hoosat.fi/addresses/{0}"
@@ -4918,9 +5060,31 @@
         "twitter": "https://twitter.com/KaspaCurrency",
         "telegram": "https://t.me/Kaspaenglish",
         "discord": "https://discord.gg/kS3SK5F36R",
+        "addressBech32Prefix": "kaspa",
+        "addressBech32PrefixDevnet": "kaspadev",
+        "addressBech32PrefixSimnet": "kaspasim",
+        "addressBech32PrefixTestnet": "kaspatest",
         "explorerBlockLink": "https://explorer.kaspa.org/blocks/$hash$",
         "explorerTxLink": "https://explorer.kaspa.org/txs/{0}",
         "explorerAccountLink": "https://explorer.kaspa.org/addresses/{0}"
+    },
+    "kaspav2": {
+        "name": "Kaspav2",
+        "canonicalName": "Kaspav2",
+        "symbol": "KASV2",
+        "family": "kaspa",
+        "website": "http://kaspa-v2.com/",
+        "market": "https://coinmarketcap.com/currencies/kaspa/",
+        "twitter": "https://x.com/Kaspa_v2",
+        "telegram": "https://t.me/kaspav2",
+        "discord": "https://discord.gg/kaspav2",
+        "addressBech32Prefix": "kasv2",
+        "addressBech32PrefixDevnet": "kasv2dev",
+        "addressBech32PrefixSimnet": "kasv2sim",
+        "addressBech32PrefixTestnet": "kasv2test",
+        "explorerBlockLink": "https://explorer.kaspa-v2.services/blocks/$hash$",
+        "explorerTxLink": "https://explorer.kaspa-v2.services/txs/{0}",
+        "explorerAccountLink": "https://explorer.kaspa-v2.services/addresses/{0}"   
     },
     "kaspaclassic": {
         "name": "Kaspa Classic",
@@ -4932,6 +5096,10 @@
         "twitter": "https://twitter.com/kaspaclassic",
         "telegram": "https://t.me/kaspaclassic",
         "discord": "https://discord.com/invite/kaspaclassic1",
+        "addressBech32Prefix": "cas",
+        "addressBech32PrefixDevnet": "caspadev",
+        "addressBech32PrefixSimnet": "pyrinsim",
+        "addressBech32PrefixTestnet": "pyrintest",
         "explorerBlockLink": "https://explorer.kaspa-classic.online/blocks/$hash$",
         "explorerTxLink": "https://explorer.kaspa-classic.online/txs/{0}",
         "explorerAccountLink": "https://explorer.kaspa-classic.online/addresses/{0}"
@@ -4946,6 +5114,10 @@
         "twitter": "https://twitter.com/karlsennetwork",
         "telegram": "https://t.me/KarlsenNetwork",
         "discord": "https://discord.com/invite/NasfjsEm",
+        "addressBech32Prefix": "karlsen",
+        "addressBech32PrefixDevnet": "karlsendev",
+        "addressBech32PrefixSimnet": "karlsensim",
+        "addressBech32PrefixTestnet": "karlsentest",
         "explorerBlockLink": "https://explorer.karlsencoin.com/blocks/$hash$",
         "explorerTxLink": "https://explorer.karlsencoin.com/txs/{0}",
         "explorerAccountLink": "https://explorer.karlsencoin.com/addresses/{0}"
@@ -4960,6 +5132,10 @@
         "twitter": "https://twitter.com/nautilusNTL",
         "telegram": "",
         "discord": "https://discord.com/invite/qWcUUgww4d",
+        "addressBech32Prefix": "nautilus",
+        "addressBech32PrefixDevnet": "nautiliadev",
+        "addressBech32PrefixSimnet": "nautilussim",
+        "addressBech32PrefixTestnet": "nautilustest",
         "explorerBlockLink": "https://explorer.nautilus-network.net/blocks/$hash$",
         "explorerTxLink": "https://explorer.nautilus-network.net/txs/{0}",
         "explorerAccountLink": "https://explorer.nautilus-network.net/addresses/{0}"
@@ -4974,9 +5150,31 @@
         "twitter": "https://twitter.com/nexellia",
         "telegram": "https://t.me/NexelliaNetwork",
         "discord": "https://discord.com/invite/MHn4wStC4h",
-        "explorerBlockLink": "https://explorer.nexell-ia.net/blocks/$hash$",
-        "explorerTxLink": "https://explorer.nexell-ia.net/txs/{0}",
-        "explorerAccountLink": "https://explorer.nexell-ia.net/addresses/{0}"
+        "addressBech32Prefix": "nexellia",
+        "addressBech32PrefixDevnet": "nexelliadev",
+        "addressBech32PrefixSimnet": "nexelliasim",
+        "addressBech32PrefixTestnet": "nexelliatest",
+        "explorerBlockLink": "https://explorer.nexell-ai.com/blocks/$hash$",
+        "explorerTxLink": "https://explorer.nexell-ai.com/txs/{0}",
+        "explorerAccountLink": "https://explorer.nexell-ai.com/addresses/{0}"
+    },
+    "pugdag": {
+        "name": "Pugdag",
+        "canonicalName": "Pugdag",
+        "symbol": "PUG",
+        "family": "kaspa",
+        "website": "https://pugdag.com/",
+        "market": "",
+        "twitter": "https://twitter.com/pug_dag",
+        "telegram": "https://t.me/pug_dag",
+        "discord": "https://discord.com/invite/pugdag",
+        "addressBech32Prefix": "pugdag",
+        "addressBech32PrefixDevnet": "pugdagdev",
+        "addressBech32PrefixSimnet": "pugdagsim",
+        "addressBech32PrefixTestnet": "pugdagtest",
+        "explorerBlockLink": "https://explorer.pugdag.com/blocks/$hash$",
+        "explorerTxLink": "https://explorer.pugdag.com/txs/{0}",
+        "explorerAccountLink": "https://explorer.pugdag.com/addresses/{0}"
     },
     "pyrin": {
         "name": "Pyrin",
@@ -4988,6 +5186,10 @@
         "twitter": "https://twitter.com/pyrin_network",
         "telegram": "https://t.me/pyrin_network",
         "discord": "https://discord.gg/QQgWRntF",
+        "addressBech32Prefix": "pyrin",
+        "addressBech32PrefixDevnet": "pyipadev",
+        "addressBech32PrefixSimnet": "pyrinsim",
+        "addressBech32PrefixTestnet": "pyrintest",
         "explorerBlockLink": "https://explorer.pyrin.network/blocks/$hash$",
         "explorerTxLink": "https://explorer.pyrin.network/txs/{0}",
         "explorerAccountLink": "https://explorer.pyrin.network/addresses/{0}"
@@ -5002,8 +5204,45 @@
         "twitter": "https://twitter.com/SedraCoin",
         "telegram": "https://t.me/OfficialSedraCoin",
         "discord": "https://discord.gg/jWHrkKMSEr",
+        "addressBech32Prefix": "sedra",
+        "addressBech32PrefixDevnet": "sedradev",
+        "addressBech32PrefixSimnet": "sedrasim",
+        "addressBech32PrefixTestnet": "sedratest",
         "explorerBlockLink": "https://explorer.sedracoin.com/blocks/$hash$",
         "explorerTxLink": "https://explorer.sedracoin.com/txs/{0}",
         "explorerAccountLink": "https://explorer.sedracoin.com/addresses/{0}"
+    },
+    "spectre-network": {
+        "name": "Spectre Network",
+        "canonicalName": "Spectre Network",
+        "symbol": "SPR",
+        "family": "kaspa",
+        "website": "https://spectre-network.org/",
+        "market": "",
+        "twitter": "https://twitter.com/SpectreNetwrk",
+        "telegram": "https://t.me/Spectre_Network",
+        "discord": "https://discord.spectre-network.org/",
+        "addressBech32Prefix": "spectre",
+        "addressBech32PrefixDevnet": "spectredev",
+        "addressBech32PrefixSimnet": "spectresim",
+        "addressBech32PrefixTestnet": "spectretest",
+        "hashrateMultiplier": 256,
+        "explorerBlockLink": "https://explorer.spectre-network.org/blocks/$hash$",
+        "explorerTxLink": "https://explorer.spectre-network.org/txs/{0}",
+        "explorerAccountLink": "https://explorer.spectre-network.org/addresses/{0}"
+    },
+    "warthog": {
+        "name": "Warthog Network",
+        "canonicalName": "Warthog Network",
+        "symbol": "WART",
+        "family": "warthog",
+        "website": "https://www.warthog.network/",
+        "market": "https://www.coingecko.com/en/coins/warthog",
+        "twitter": "https://twitter.com/warthognetwork",
+        "telegram": "https://t.me/warthognetwork",
+        "discord": "https://discord.com/invite/QMDV8bGTdQ",
+        "explorerBlockLink": "https://wartscan.io/block/$height$",
+        "explorerTxLink": "https://wartscan.io/tx/{0}",
+        "explorerAccountLink": "https://wartscan.io/account/{0}"
     }
 }

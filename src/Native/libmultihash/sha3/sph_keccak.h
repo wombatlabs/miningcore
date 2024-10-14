@@ -197,6 +197,33 @@ void sph_keccak256_addbits_and_close(
 	void *cc, unsigned ub, unsigned n, void *dst);
 
 /**
+ * Terminate the current Keccak-256 computation and output the result into
+ * the provided buffer. The destination buffer must be wide enough to
+ * accomodate the result (32 bytes). The context is automatically
+ * reinitialized.
+ *
+ * @param cc    the Keccak-256 context
+ * @param dst   the destination buffer
+ */
+void sph_flex_keccak256_close(void *cc, void *dst);
+
+/**
+ * Add a few additional bits (0 to 7) to the current computation, then
+ * terminate it and output the result in the provided buffer, which must
+ * be wide enough to accomodate the result (32 bytes). If bit number i
+ * in <code>ub</code> has value 2^i, then the extra bits are those
+ * numbered 7 downto 8-n (this is the big-endian convention at the byte
+ * level). The context is automatically reinitialized.
+ *
+ * @param cc    the Keccak-256 context
+ * @param ub    the extra bits
+ * @param n     the number of extra bits (0 to 7)
+ * @param dst   the destination buffer
+ */
+void sph_flex_keccak256_addbits_and_close(
+	void *cc, unsigned ub, unsigned n, void *dst);
+
+/**
  * Initialize a Keccak-384 context. This process performs no memory allocation.
  *
  * @param cc   the Keccak-384 context (pointer to a
@@ -284,6 +311,33 @@ void sph_keccak512_close(void *cc, void *dst);
  * @param dst   the destination buffer
  */
 void sph_keccak512_addbits_and_close(
+	void *cc, unsigned ub, unsigned n, void *dst);
+
+/**
+ * Terminate the current Keccak-512 computation and output the result into
+ * the provided buffer. The destination buffer must be wide enough to
+ * accomodate the result (64 bytes). The context is automatically
+ * reinitialized.
+ *
+ * @param cc    the Keccak-512 context
+ * @param dst   the destination buffer
+ */
+void sph_flex_keccak512_close(void *cc, void *dst);
+
+/**
+ * Add a few additional bits (0 to 7) to the current computation, then
+ * terminate it and output the result in the provided buffer, which must
+ * be wide enough to accomodate the result (64 bytes). If bit number i
+ * in <code>ub</code> has value 2^i, then the extra bits are those
+ * numbered 7 downto 8-n (this is the big-endian convention at the byte
+ * level). The context is automatically reinitialized.
+ *
+ * @param cc    the Keccak-512 context
+ * @param ub    the extra bits
+ * @param n     the number of extra bits (0 to 7)
+ * @param dst   the destination buffer
+ */
+void sph_flex_keccak512_addbits_and_close(
 	void *cc, unsigned ub, unsigned n, void *dst);
 
 #ifdef __cplusplus

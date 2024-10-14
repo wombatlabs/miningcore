@@ -80,7 +80,9 @@
             "enabled": true,
             "time": 600,
             "invalidPercent": 50,
-            "checkThreshold": 50
+            "checkThreshold": 50,
+            "minerEffortPercent": 0.00000000465661287,
+            "minerEffortTime": 259200
         },
         "ports": {
             "3094": {
@@ -130,6 +132,8 @@
             "enabled": true,
             "walletPassword": "<The Kaspa's wallet password which owns the pool address>",
             "minimumPayment": 1,
+            "versionEnablingMaxFee": "v0.12.18-rc5",
+            "maxFee": 200000,
             "payoutScheme": "PPLNS",
             "payoutSchemeConfig": {
                 "factor": 0.5

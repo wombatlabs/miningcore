@@ -5,6 +5,12 @@ namespace Miningcore.Blockchain.Kaspa.Configuration;
 public class KaspaPoolConfigExtra
 {
     /// <summary>
+    /// There are several reports of IDIOTS mining with ridiculous amount of hashrate and maliciously using a very low staticDiff in order to attack mining pools.
+    /// StaticDiff is now disabled by default for the KASPA family. Use it at your own risks.
+    /// </summary>
+    public bool EnableStaticDifficulty { get; set; } = false;
+
+    /// <summary>
     /// Maximum number of tracked jobs.
     /// Default: 8
     /// </summary>

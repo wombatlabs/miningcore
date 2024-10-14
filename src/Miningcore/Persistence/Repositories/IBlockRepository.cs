@@ -14,10 +14,15 @@ public interface IBlockRepository
     Task<Block[]> PageMinerBlocksAsync(IDbConnection con, string poolId, string address, BlockStatus[] status, int page, int pageSize, CancellationToken ct);
     Task<Block[]> GetPendingBlocksForPoolAsync(IDbConnection con, string poolId);
     Task<Block> GetBlockBeforeAsync(IDbConnection con, string poolId, BlockStatus[] status, DateTime before);
+    Task<Block> GetMinerBlockBeforeAsync(IDbConnection con, string poolId, string miner, BlockStatus[] status, DateTime before, CancellationToken ct);
     Task<uint> GetBlockBeforeCountAsync(IDbConnection con, string poolId, BlockStatus[] status, DateTime before);
     Task<uint> GetPoolBlockCountAsync(IDbConnection con, string poolId, CancellationToken ct);
+    Task<uint> GetTotalConfirmedBlocksAsync(IDbConnection con, string poolId, CancellationToken ct);
+    Task<uint> GetTotalPendingBlocksAsync(IDbConnection con, string poolId, CancellationToken ct);
+    Task<decimal> GetLastConfirmedBlockRewardAsync(IDbConnection con, string poolId, CancellationToken ct);
+    Task<DateTime?> GetLastMinerBlockTimeAsync(IDbConnection con, string poolId, string address, CancellationToken ct);
     Task<uint> GetMinerBlockCountAsync(IDbConnection con, string poolId, string address, CancellationToken ct);
-    Task<DateTime?> GetLastPoolBlockTimeAsync(IDbConnection con, string poolId);
+    Task<DateTime?> GetLastPoolBlockTimeAsync(IDbConnection con, string poolId, CancellationToken ct);
     Task<Block> GetBlockByPoolHeightAndTypeAsync(IDbConnection con, string poolId, long height, string type);
     Task<uint> GetPoolDuplicateBlockCountByPoolHeightNoTypeAndStatusAsync(IDbConnection con, string poolId, long height, BlockStatus[] status);
     Task<uint> GetPoolDuplicateBlockBeforeCountByPoolHeightNoTypeAndStatusAsync(IDbConnection con, string poolId, long height, BlockStatus[] status, DateTime before);

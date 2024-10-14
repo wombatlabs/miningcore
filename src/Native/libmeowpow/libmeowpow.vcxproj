@@ -185,9 +185,9 @@
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="stdint.h" />
     <ClInclude Include="support\attributes.h" />
+    <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="ethash\ethash.cpp" />
     <ClCompile Include="ethash\managed.cpp" />
     <ClCompile Include="ethash\primes.c" />
@@ -195,6 +195,8 @@
     <ClCompile Include="keccak\keccak.c" />
     <ClCompile Include="keccak\keccakf1600.c" />
     <ClCompile Include="keccak\keccakf800.c" />
+    <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="exports.cpp" />
     <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -391,14 +391,20 @@ public class ConcealJobManager : JobManagerBase<ConcealJob>
         // test daemons
         try
         {
-            var response = await restClient.Get<GetInfoResponse>(ConcealConstants.DaemonRpcGetInfoLocation, ct);
-            if(response?.Status != "OK")
+            var request = new GetBlockTemplateRequest
             {
-                logger.Debug(() => $"conceald daemon did not responded...");
-                return false;
-            }
+                WalletAddress = poolConfig.Address,
+                ReserveSize = ConcealConstants.ReserveSize
+            };
 
-            logger.Debug(() => $"{response?.Status} - Incoming: {response?.IncomingConnectionsCount} - Outgoing: {response?.OutgoingConnectionsCount})");
+            var response = await rpc.ExecuteAsync<GetBlockTemplateResponse>(logger,
+                ConcealCommands.GetBlockTemplate, ct, request);
+
+            if(response.Error != null)
+                logger.Debug(() => $"conceald daemon response: {response.Error.Message} (Code {response.Error.Code})");
+
+            if(response.Error is {Code: -9})
+                return false;
         }
         
         catch(Exception)

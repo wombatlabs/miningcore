@@ -169,7 +169,7 @@ public class AlephiumPool : PoolBase
             await connection.NotifyAsync(AlephiumStratumMethods.SetExtraNonce, manager.GetSubscriberData(connection));
 
             // log association
-            logger.Info(() => $"[{connection.ConnectionId}] Authorized worker {workerValue}");
+            logger.Info(() => $"[{connection.ConnectionId}]{(!string.IsNullOrEmpty(context.UserAgent) ? $"[{context.UserAgent}]" : string.Empty)} Authorized worker {workerValue}");
 
             // extract control vars from password
             var staticDiff = GetStaticDiffFromPassparts(passParts);

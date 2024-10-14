@@ -499,7 +499,7 @@ public class EthereumPool : PoolBase
                     break;
 
                 case EthereumStratumMethods.GetWork:
-                    if(!extraPoolConfig.enableEthashStratumV1)
+                    if(!extraPoolConfig.EnableEthashStratumV1)
                     {
                         logger.Info(() => $"[{connection.ConnectionId}] Unsupported RPC request: {JsonConvert.SerializeObject(request, serializerSettings)}");
 
@@ -515,7 +515,7 @@ public class EthereumPool : PoolBase
                     break;
 
                 case EthereumStratumMethods.SubmitWork:
-                    if(!extraPoolConfig.enableEthashStratumV1)
+                    if(!extraPoolConfig.EnableEthashStratumV1)
                     {
                         logger.Info(() => $"[{connection.ConnectionId}] Unsupported RPC request: {JsonConvert.SerializeObject(request, serializerSettings)}");
 

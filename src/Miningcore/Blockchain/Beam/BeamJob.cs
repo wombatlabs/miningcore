@@ -3,12 +3,13 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using System.Numerics;
 using System.Reflection;
-using System.Security.Cryptography;
 using System.Text;
 using Miningcore.Blockchain.Bitcoin;
 using Miningcore.Blockchain.Beam.DaemonResponses;
 using Miningcore.Configuration;
 using Miningcore.Contracts;
+using Miningcore.Crypto;
+using Miningcore.Crypto.Hashing.Algorithms;
 using Miningcore.Extensions;
 using Miningcore.Native;
 using Miningcore.Stratum;
@@ -28,7 +29,7 @@ public class BeamJob
     protected readonly ConcurrentDictionary<string, bool> submissions = new(StringComparer.OrdinalIgnoreCase);
 
     protected BeamHash solver;
-    protected readonly HashAlgorithm sha256 = SHA256.Create();
+    protected readonly IHashAlgorithm sha256S = new Sha256S();
 
     private (Share Share, string BlockHex, short stratumError) ProcessShareInternal(StratumConnection worker, string nonce,
         string solution)
@@ -45,7 +46,7 @@ public class BeamJob
         
         // hash block-solution
         Span<byte> solutionHash = stackalloc byte[32];
-        SHA256.HashData(solutionBytes, solutionHash);
+        sha256S.Digest(solutionBytes, solutionHash);
         BigInteger solutionHashValue = new BigInteger(solutionHash, true, true);
         
         // calc share-diff

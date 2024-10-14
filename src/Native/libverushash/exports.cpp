@@ -28,6 +28,11 @@ extern "C" MODULE_API void verushash2b2_export(char* input, char* output, int in
     verushash2b2(input, output, input_length);
 }
 
+extern "C" MODULE_API void verushash2b2o_export(char* input, char* output, int input_length)
+{
+    verushash2b2o(input, output, input_length);
+}
+
 extern "C" MODULE_API void verushash2b1_export(char* input, char* output, int input_length)
 {
     verushash2b1(input, output, input_length);

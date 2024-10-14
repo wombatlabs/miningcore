@@ -9,6 +9,7 @@ public class Block
     public string Type { get; set; }
     public double ConfirmationProgress { get; set; }
     public double? Effort { get; set; }
+    public double? MinerEffort { get; set; }
     public string TransactionConfirmationData { get; set; }
     public decimal Reward { get; set; }
     public string InfoLink { get; set; }

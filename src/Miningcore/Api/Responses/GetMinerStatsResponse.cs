@@ -25,8 +25,11 @@ public class MinerStats
     public decimal PendingBalance { get; set; }
     public decimal TotalPaid { get; set; }
     public decimal TodayPaid { get; set; }
+    public double MinerEffort { get; set; }
     public DateTime? LastPayment { get; set; }
     public string LastPaymentLink { get; set; }
     public WorkerPerformanceStatsContainer Performance { get; set; }
     public WorkerPerformanceStatsContainer[] PerformanceSamples { get; set; }
+    public long TotalConfirmedBlocks { get; set; }
+    public long TotalPendingBlocks { get; set; }
 }

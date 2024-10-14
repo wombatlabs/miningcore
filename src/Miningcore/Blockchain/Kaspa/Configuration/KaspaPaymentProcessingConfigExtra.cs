@@ -9,13 +9,19 @@ public class KaspaPaymentProcessingConfigExtra
 
     /// <summary>
     /// Minimum block confirmations
-    /// Default: 10
+    /// KAS minimum confirmation can change over time so please always study all those different changes very wisely: https://github.com/kaspanet/rusty-kaspa/blob/master/wallet/core/src/utxo/settings.rs
+    /// Default: (mainnet: 120, testnet: 110)
     /// </summary>
     public int? MinimumConfirmations { get; set; }
-    
+
     /// <summary>
-    /// Maximum number of payouts which can be done in parallel
-    /// Default: 2
+    /// kaspawallet daemon version which enables MaxFee (KASPA: "v0.12.18-rc5")
     /// </summary>
-    public int? MaxDegreeOfParallelPayouts { get; set; }
+    public string VersionEnablingMaxFee { get; set; }
+
+    /// <summary>
+    /// Maximum amount you're willing to pay (in SOMPI)
+    /// Default: 20000 (0.0002 KAS)
+    /// </summary>
+    public ulong? MaxFee { get; set; }
 }

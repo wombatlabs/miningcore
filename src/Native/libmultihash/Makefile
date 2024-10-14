@@ -29,7 +29,12 @@ OBJECTS = bcrypt.o blake.o c11.o dcrypt.o fresh.o lane.o \
         skydoge.o yescrypt/sha256.o yescrypt/yescrypt.o yescrypt/yescrypt-opt.o \
         yespower/crypto/blake2b-yp.o yespower/yespower-blake2b.o yespower/yespower-combined.o yespower/yespower-platform.o \
         minotaur/crypto/sha256.o minotaur/crypto/yespower.o minotaur/minotaurx.o \
-        fishhash/3rdParty/keccak.o fishhash/fishhash.o
+        fishhash/3rdParty/fishhash_keccak.o fishhash/fishhash.o \
+        flex/cryptonote/crypto/aesb.o flex/cryptonote/crypto/c_blake256.o flex/cryptonote/crypto/c_groestl.o flex/cryptonote/crypto/c_jh.o \
+        flex/cryptonote/crypto/c_keccak.o flex/cryptonote/crypto/c_skein.o flex/cryptonote/crypto/hash.o flex/cryptonote/crypto/oaes_lib.o flex/cryptonote/crypto/wild_keccak.o \
+        flex/cryptonote/cryptonight.o flex/cryptonote/cryptonight_dark.o flex/cryptonote/cryptonight_dark_lite.o flex/cryptonote/cryptonight_fast.o \
+        flex/cryptonote/cryptonight_lite.o flex/cryptonote/cryptonight_soft_shell.o flex/cryptonote/cryptonight_turtle.o flex/cryptonote/cryptonight_turtle_lite.o \
+        flex/flex.o 
 
 all: $(TARGET)
 

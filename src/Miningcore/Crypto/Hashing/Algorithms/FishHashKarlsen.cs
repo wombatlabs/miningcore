@@ -1,18 +1,28 @@
+using System;
 using Miningcore.Contracts;
 using Miningcore.Native;
+using Miningcore.Time;
+using NLog;
 
 namespace Miningcore.Crypto.Hashing.Algorithms;
 
 [Identifier("fishhashkarlsen")]
 public unsafe class FishHashKarlsen : IHashAlgorithm
 {
-    private bool enableFishHashPlus = false;
+    private static readonly ILogger logger = LogManager.GetCurrentClassLogger();
+
+    public byte fishHashKernel { get; private set; } = 1;
     private IntPtr handle = IntPtr.Zero;
     private readonly object genLock = new();
 
-    public FishHashKarlsen(bool enableFishHashPlus = false, bool fullContext = false, uint threads = 4)
+    public FishHashKarlsen(byte fishHashKernel = 1, bool fullContext = false, uint threads = 4)
     {
-        this.enableFishHashPlus = enableFishHashPlus;
+        Contract.Requires<ArgumentException>(fishHashKernel >= 1);
+
+        this.fishHashKernel = fishHashKernel;
+
+        var started = DateTime.Now;
+        logger.Debug(() => $"Generating light cache");
 
         lock(genLock)
         {
@@ -20,6 +30,8 @@ public unsafe class FishHashKarlsen : IHashAlgorithm
             if(fullContext)
                 Multihash.fishhashPrebuildDataset(this.handle, threads);
         }
+
+        logger.Debug(() => $"Done generating light cache after {DateTime.Now - started}");
     }
 
     public void Digest(ReadOnlySpan<byte> data, Span<byte> result, params object[] extra)
@@ -27,22 +39,11 @@ public unsafe class FishHashKarlsen : IHashAlgorithm
         Contract.Requires<ArgumentException>(this.handle != IntPtr.Zero);
         Contract.Requires<ArgumentException>(result.Length >= 32);
 
-        // concat data in byte[64]
-        Span<byte> seedBytes = stackalloc byte[64];
-        data.CopyTo(seedBytes);
-
-        var mixHash = new Multihash.Fishhash_hash256();
-
-        var seed = new Multihash.Fishhash_hash512();
-        seed.bytes = seedBytes.ToArray();
-
-        mixHash = (this.enableFishHashPlus) ? Multihash.fishhashplusKernel(this.handle, ref seed) : Multihash.fishhashKernel(this.handle, ref seed);
-
-        fixed(byte* input = mixHash.bytes)
+        fixed(byte* input = data)
         {
             fixed (byte* output = result)
             {
-                Multihash.blake3(input, output, (uint) mixHash.bytes.Length, null, 0);
+                Multihash.fishhaskarlsen(output, this.handle, input, (uint) data.Length, this.fishHashKernel);
             }
         }
     }

@@ -96,10 +96,10 @@
         "ports": {
             "3092": {
                 "listenAddress": "0.0.0.0",
-                "difficulty": 256,
+                "difficulty": 25600000,
                 "varDiff": {
-                    "minDiff": 256,
-                    "maxDiff": 1048576000,
+                    "minDiff": 25600000,
+                    "maxDiff": null,
                     "targetTime": 15,
                     "retargetTime": 90,
                     "variancePercent": 30,
@@ -108,13 +108,13 @@
             },
             "3093": {
                 "listenAddress": "0.0.0.0",
-                "difficulty": 256,
+                "difficulty": 25600000,
                 "tls": true,
                 "tlsPfxFile": "<Your directory for the pfx file>",
                 "tlsPfxPassword": "password",
                 "varDiff": {
-                    "minDiff": 256,
-                    "maxDiff": 1048576000,
+                    "minDiff": 25600000,
+                    "maxDiff": null,
                     "targetTime": 15,
                     "retargetTime": 90,
                     "variancePercent": 30,

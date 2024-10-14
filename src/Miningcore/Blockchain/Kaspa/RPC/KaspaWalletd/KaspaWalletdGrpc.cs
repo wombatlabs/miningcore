@@ -77,6 +77,20 @@ namespace Miningcore.Blockchain.Kaspa.KaspaWalletd {
         "Sign",
         __Marshaller_KaspaWalletdRPC_SignRequest,
         __Marshaller_KaspaWalletdRPC_SignResponse);
+
+      this.__Method_GetVersion = new grpc::Method<global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetVersionRequest, global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetVersionResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "GetVersion",
+        __Marshaller_kaspawalletd_GetVersionRequest,
+        __Marshaller_kaspawalletd_GetVersionResponse);
+
+      this.__Method_BumpFee = new grpc::Method<global::Miningcore.Blockchain.Kaspa.KaspaWalletd.BumpFeeRequest, global::Miningcore.Blockchain.Kaspa.KaspaWalletd.BumpFeeResponse>(
+        grpc::MethodType.Unary,
+        __ServiceName,
+        "BumpFee",
+        __Marshaller_kaspawalletd_BumpFeeRequest,
+        __Marshaller_kaspawalletd_BumpFeeResponse);
     }
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
@@ -148,6 +162,14 @@ namespace Miningcore.Blockchain.Kaspa.KaspaWalletd {
     static readonly grpc::Marshaller<global::Miningcore.Blockchain.Kaspa.KaspaWalletd.SignRequest> __Marshaller_KaspaWalletdRPC_SignRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Miningcore.Blockchain.Kaspa.KaspaWalletd.SignRequest.Parser));
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     static readonly grpc::Marshaller<global::Miningcore.Blockchain.Kaspa.KaspaWalletd.SignResponse> __Marshaller_KaspaWalletdRPC_SignResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Miningcore.Blockchain.Kaspa.KaspaWalletd.SignResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetVersionRequest> __Marshaller_kaspawalletd_GetVersionRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetVersionRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetVersionResponse> __Marshaller_kaspawalletd_GetVersionResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetVersionResponse.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Miningcore.Blockchain.Kaspa.KaspaWalletd.BumpFeeRequest> __Marshaller_kaspawalletd_BumpFeeRequest = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Miningcore.Blockchain.Kaspa.KaspaWalletd.BumpFeeRequest.Parser));
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    static readonly grpc::Marshaller<global::Miningcore.Blockchain.Kaspa.KaspaWalletd.BumpFeeResponse> __Marshaller_kaspawalletd_BumpFeeResponse = grpc::Marshallers.Create(__Helper_SerializeMessage, context => __Helper_DeserializeMessage(context, global::Miningcore.Blockchain.Kaspa.KaspaWalletd.BumpFeeResponse.Parser));
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     public grpc::Method<global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetBalanceRequest, global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetBalanceResponse> __Method_GetBalance { get; private set; }
@@ -175,6 +197,12 @@ namespace Miningcore.Blockchain.Kaspa.KaspaWalletd {
 
     [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
     public grpc::Method<global::Miningcore.Blockchain.Kaspa.KaspaWalletd.SignRequest, global::Miningcore.Blockchain.Kaspa.KaspaWalletd.SignResponse> __Method_Sign { get; private set; }
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    public grpc::Method<global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetVersionRequest, global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetVersionResponse> __Method_GetVersion { get; private set; }
+
+    [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+    public grpc::Method<global::Miningcore.Blockchain.Kaspa.KaspaWalletd.BumpFeeRequest, global::Miningcore.Blockchain.Kaspa.KaspaWalletd.BumpFeeResponse> __Method_BumpFee { get; private set; }
 
     /// <summary>Service descriptor</summary>
     public static global::Google.Protobuf.Reflection.ServiceDescriptor Descriptor
@@ -447,6 +475,46 @@ namespace Miningcore.Blockchain.Kaspa.KaspaWalletd {
       public virtual grpc::AsyncUnaryCall<global::Miningcore.Blockchain.Kaspa.KaspaWalletd.SignResponse> SignAsync(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.SignRequest request, grpc::CallOptions options)
       {
         return CallInvoker.AsyncUnaryCall(__KaspaWalletdRPC.__Method_Sign, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetVersionResponse GetVersion(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetVersionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return GetVersion(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetVersionResponse GetVersion(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetVersionRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__KaspaWalletdRPC.__Method_GetVersion, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetVersionResponse> GetVersionAsync(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetVersionRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return GetVersionAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetVersionResponse> GetVersionAsync(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.GetVersionRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__KaspaWalletdRPC.__Method_GetVersion, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Miningcore.Blockchain.Kaspa.KaspaWalletd.BumpFeeResponse BumpFee(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.BumpFeeRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return BumpFee(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual global::Miningcore.Blockchain.Kaspa.KaspaWalletd.BumpFeeResponse BumpFee(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.BumpFeeRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.BlockingUnaryCall(__KaspaWalletdRPC.__Method_BumpFee, null, options, request);
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Miningcore.Blockchain.Kaspa.KaspaWalletd.BumpFeeResponse> BumpFeeAsync(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.BumpFeeRequest request, grpc::Metadata headers = null, global::System.DateTime? deadline = null, global::System.Threading.CancellationToken cancellationToken = default(global::System.Threading.CancellationToken))
+      {
+        return BumpFeeAsync(request, new grpc::CallOptions(headers, deadline, cancellationToken));
+      }
+      [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]
+      public virtual grpc::AsyncUnaryCall<global::Miningcore.Blockchain.Kaspa.KaspaWalletd.BumpFeeResponse> BumpFeeAsync(global::Miningcore.Blockchain.Kaspa.KaspaWalletd.BumpFeeRequest request, grpc::CallOptions options)
+      {
+        return CallInvoker.AsyncUnaryCall(__KaspaWalletdRPC.__Method_BumpFee, null, options, request);
       }
       /// <summary>Creates a new instance of client from given <c>ClientBaseConfiguration</c>.</summary>
       [global::System.CodeDom.Compiler.GeneratedCode("grpc_csharp_plugin", null)]

@@ -55,11 +55,17 @@ public partial class BitcoinTemplate
 {
     public BitcoinTemplate()
     {
+        merkleTreeHasherValue = new Lazy<IHashAlgorithm>(() =>
+            HashAlgorithmFactory.GetHash(ComponentContext, MerkleTreeHasher));
+
         coinbaseHasherValue = new Lazy<IHashAlgorithm>(() =>
             HashAlgorithmFactory.GetHash(ComponentContext, CoinbaseHasher));
 
         headerHasherValue = new Lazy<IHashAlgorithm>(() =>
             HashAlgorithmFactory.GetHash(ComponentContext, HeaderHasher));
+
+        shareHasherValue = new Lazy<IHashAlgorithm>(() =>
+            HashAlgorithmFactory.GetHash(ComponentContext, ShareHasher));
 
         blockHasherValue = new Lazy<IHashAlgorithm>(() =>
             HashAlgorithmFactory.GetHash(ComponentContext, BlockHasher));
@@ -68,15 +74,19 @@ public partial class BitcoinTemplate
             HashAlgorithmFactory.GetHash(ComponentContext, PoSBlockHasher));
     }
 
+    private readonly Lazy<IHashAlgorithm> merkleTreeHasherValue;
     private readonly Lazy<IHashAlgorithm> coinbaseHasherValue;
     private readonly Lazy<IHashAlgorithm> headerHasherValue;
+    private readonly Lazy<IHashAlgorithm> shareHasherValue;
     private readonly Lazy<IHashAlgorithm> blockHasherValue;
     private readonly Lazy<IHashAlgorithm> posBlockHasherValue;
 
     public IComponentContext ComponentContext { get; [UsedImplicitly] init; }
 
+    public IHashAlgorithm MerkleTreeHasherValue => merkleTreeHasherValue.Value;
     public IHashAlgorithm CoinbaseHasherValue => coinbaseHasherValue.Value;
     public IHashAlgorithm HeaderHasherValue => headerHasherValue.Value;
+    public IHashAlgorithm ShareHasherValue => shareHasherValue.Value;
     public IHashAlgorithm BlockHasherValue => blockHasherValue.Value;
     public IHashAlgorithm PoSBlockHasherValue => posBlockHasherValue.Value;
 
@@ -99,12 +109,20 @@ public partial class BitcoinTemplate
 
     public override string GetAlgorithmName()
     {
-        var hash = HeaderHasherValue;
+        switch(Symbol)
+        {
+            case "HNS":
+                return HeaderHasherValue.GetType().Name + " + " + ShareHasherValue.GetType().Name;
+            case "KCN":
+                return HeaderHasherValue.GetType().Name;
+            default:
+                var hash = HeaderHasherValue;
 
-        if(hash.GetType() == typeof(DigestReverser))
-            return ((DigestReverser) hash).Upstream.GetType().Name;
+                if(hash.GetType() == typeof(DigestReverser))
+                    return ((DigestReverser) hash).Upstream.GetType().Name;
 
-        return hash.GetType().Name;
+                return hash.GetType().Name;
+        }
     }
 
     #endregion
@@ -258,14 +276,21 @@ public partial class KaspaCoinTemplate
     {
         switch(Symbol)
         {
+            case "AIX":
+                return "AstrixHash";
             case "KLS":
+                return "Karlsenhashv2";
+            case "CSS":
             case "NTL":
             case "NXL":
+            case "PUG":
                 return "Karlsenhash";
             case "CAS":
             case "HTN":
             case "PYI":
                 return "Pyrinhash";
+            case "SPR":
+                return " SpectreX";
             default:
                 // TODO: return variant
                 return "kHeavyHash";
@@ -292,6 +317,18 @@ public partial class ProgpowCoinTemplate
     public override string GetAlgorithmName()
     {
         return ProgpowHasher.AlgoName;
+    }
+
+    #endregion
+}
+
+public partial class WarthogCoinTemplate
+{
+    #region Overrides of CoinTemplate
+
+    public override string GetAlgorithmName()
+    {
+        return "PoBW";
     }
 
     #endregion

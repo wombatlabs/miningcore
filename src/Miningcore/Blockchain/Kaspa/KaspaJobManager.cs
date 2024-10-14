@@ -13,8 +13,10 @@ using Autofac;
 using Grpc.Core;
 using Grpc.Net.Client;
 using Miningcore.Blockchain.Kaspa.Configuration;
+using Miningcore.Blockchain.Kaspa.Custom.Astrix;
 using Miningcore.Blockchain.Kaspa.Custom.Karlsencoin;
 using Miningcore.Blockchain.Kaspa.Custom.Pyrin;
+using Miningcore.Blockchain.Kaspa.Custom.Spectre;
 using NLog;
 using Miningcore.Configuration;
 using Miningcore.Crypto;
@@ -215,6 +217,17 @@ public class KaspaJobManager : JobManagerBase<KaspaJob>
     {
         switch(coin.Symbol)
         {
+            case "AIX":
+                if(customBlockHeaderHasher is not Blake2b)
+                    customBlockHeaderHasher = new Blake2b(Encoding.UTF8.GetBytes(KaspaConstants.CoinbaseBlockHash));
+
+                if(customCoinbaseHasher is not CShake256)
+                    customCoinbaseHasher = new CShake256(null, Encoding.UTF8.GetBytes(KaspaConstants.CoinbaseProofOfWorkHash));
+
+                if(customShareHasher is not CShake256)
+                    customShareHasher = new CShake256(null, Encoding.UTF8.GetBytes(KaspaConstants.CoinbaseHeavyHash));
+
+                return new AstrixJob(customBlockHeaderHasher, customCoinbaseHasher, customShareHasher);
             case "CAS":
             case "HTN":
                 if(customBlockHeaderHasher is not Blake3)
@@ -240,41 +253,35 @@ public class KaspaJobManager : JobManagerBase<KaspaJob>
                 if(customCoinbaseHasher is not Blake3)
                     customCoinbaseHasher = new Blake3();
 
-                if(karlsenNetwork == "testnet" && blockHeight >= KarlsencoinConstants.FishHashPlusForkHeightTestnet)
+                if((karlsenNetwork == "testnet" && blockHeight >= KarlsencoinConstants.FishHashPlusForkHeightTestnet) || (karlsenNetwork == "mainnet" && blockHeight >= KarlsencoinConstants.FishHashPlusForkHeightMainnet))
                 {
                     logger.Debug(() => $"fishHashPlusHardFork activated");
 
                     if(customShareHasher is not FishHashKarlsen)
+                        customShareHasher = new FishHashKarlsen(FishHash.FishHashKernelPlus);
+                    else if(customShareHasher is FishHashKarlsen fishHashKarlsenAlgo)
                     {
-                        var started = DateTime.Now;
-                        logger.Debug(() => $"Generating light cache");
-
-                        customShareHasher = new FishHashKarlsen(true);
-
-                        logger.Debug(() => $"Done generating light cache after {DateTime.Now - started}");
+                        if(fishHashKarlsenAlgo.fishHashKernel != FishHash.FishHashKernelPlus)
+                            customShareHasher = new FishHashKarlsen(FishHash.FishHashKernelPlus);
                     }
+
                 }
                 else if(karlsenNetwork == "testnet" && blockHeight >= KarlsencoinConstants.FishHashForkHeightTestnet)
                 {
                     logger.Debug(() => $"fishHashHardFork activated");
 
                     if(customShareHasher is not FishHashKarlsen)
-                    {
-                        var started = DateTime.Now;
-                        logger.Debug(() => $"Generating light cache");
-
                         customShareHasher = new FishHashKarlsen();
-
-                        logger.Debug(() => $"Done generating light cache after {DateTime.Now - started}");
-                    }
                 }
                 else
                     if(customShareHasher is not CShake256)
                         customShareHasher = new CShake256(null, Encoding.UTF8.GetBytes(KaspaConstants.CoinbaseHeavyHash));
 
                 return new KarlsencoinJob(customBlockHeaderHasher, customCoinbaseHasher, customShareHasher);
+            case "CSS":
             case "NTL":
             case "NXL":
+            case "PUG":
                 if(customBlockHeaderHasher is not Blake2b)
                     customBlockHeaderHasher = new Blake2b(Encoding.UTF8.GetBytes(KaspaConstants.CoinbaseBlockHash));
 
@@ -316,6 +323,17 @@ public class KaspaJobManager : JobManagerBase<KaspaJob>
                 }
 
                 return new PyrinJob(customBlockHeaderHasher, customCoinbaseHasher, customShareHasher);
+            case "SPR":
+                if(customBlockHeaderHasher is not Blake2b)
+                    customBlockHeaderHasher = new Blake2b(Encoding.UTF8.GetBytes(KaspaConstants.CoinbaseBlockHash));
+
+                if(customCoinbaseHasher is not CShake256)
+                    customCoinbaseHasher = new CShake256(null, Encoding.UTF8.GetBytes(KaspaConstants.CoinbaseProofOfWorkHash));
+
+                if(customShareHasher is not CShake256)
+                    customShareHasher = new CShake256(null, Encoding.UTF8.GetBytes(KaspaConstants.CoinbaseHeavyHash));
+
+                return new SpectreJob(customBlockHeaderHasher, customCoinbaseHasher, customShareHasher);
         }
         
         if(customBlockHeaderHasher is not Blake2b)
@@ -354,7 +372,7 @@ public class KaspaJobManager : JobManagerBase<KaspaJob>
                     {
                         job = CreateJob((long) blockTemplate.Header.DaaScore);
 
-                        job.Init(blockTemplate, NextJobId());
+                        job.Init(blockTemplate, NextJobId(), ShareMultiplier);
 
                         lock(jobLock)
                         {
@@ -626,6 +644,9 @@ public class KaspaJobManager : JobManagerBase<KaspaJob>
         
         if(ValidateIsIceRiverMiner(userAgent))
             return true;
+
+        if(ValidateIsGoldShell(userAgent))
+            return true;
         
         return false;
     }
@@ -660,6 +681,28 @@ public class KaspaJobManager : JobManagerBase<KaspaJob>
         return (matchesUserAgentIceRiverMiner.Count > 0);
     }
 
+    public bool ValidateIsGoldShell(string userAgent)
+    {
+        if(string.IsNullOrEmpty(userAgent))
+            return false;
+        
+        // Find matches
+        MatchCollection matchesUserAgentGoldShell = KaspaConstants.RegexUserAgentGoldShell.Matches(userAgent);
+        return (matchesUserAgentGoldShell.Count > 0);
+    }
+
+    public bool ValidateIsTNNMiner(string userAgent)
+    {
+        if(string.IsNullOrEmpty(userAgent))
+            return false;
+        
+        // Find matches
+        MatchCollection matchesUserAgentTNNMiner = KaspaConstants.RegexUserAgentTNNMiner.Matches(userAgent);
+        return (matchesUserAgentTNNMiner.Count > 0);
+    }
+
+    public double ShareMultiplier => coin.ShareMultiplier;
+
     #endregion // API-Surface
 
     #region Overrides
@@ -686,7 +729,7 @@ public class KaspaJobManager : JobManagerBase<KaspaJob>
             break;
         }
         
-        var (kaspaAddressUtility, errorKaspaAddressUtility) = KaspaUtils.ValidateAddress(poolConfig.Address, network, coin.Symbol);
+        var (kaspaAddressUtility, errorKaspaAddressUtility) = KaspaUtils.ValidateAddress(poolConfig.Address, network, coin);
         if(errorKaspaAddressUtility != null)
             throw new PoolStartupException($"Pool address: {poolConfig.Address} is invalid for network [{network}]: {errorKaspaAddressUtility}", poolConfig.Id);
         else

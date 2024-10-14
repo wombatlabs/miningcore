@@ -6,6 +6,8 @@ using System.Numerics;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Miningcore.Configuration;
+using Miningcore.Contracts;
 using Miningcore.Crypto;
 using Miningcore.Crypto.Hashing.Algorithms;
 using Miningcore.Util;
@@ -15,8 +17,10 @@ namespace Miningcore.Blockchain.Kaspa;
 
 public static class KaspaUtils
 {
-    public static (KaspaAddressUtility, Exception) ValidateAddress(string address, string network, string coinSymbol = "KAS")
+    public static (KaspaAddressUtility, Exception) ValidateAddress(string address, string network, KaspaCoinTemplate coin)
     {
+        Contract.RequiresNonNull(coin);
+
         if(string.IsNullOrEmpty(address))
             return (null, new ArgumentException($"Empty address..."));
         
@@ -44,7 +48,7 @@ public static class KaspaUtils
         
         try
         {
-            var kaspaAddressUtility = new KaspaAddressUtility(coinSymbol);
+            var kaspaAddressUtility = new KaspaAddressUtility(coin);
             kaspaAddressUtility.DecodeAddress(address, networkBech32Prefix);
 
             return (kaspaAddressUtility, null);
@@ -57,7 +61,7 @@ public static class KaspaUtils
     
     public static BigInteger DifficultyToTarget(double difficulty)
     {
-        return BigInteger.Divide(KaspaConstants.Diff1Target, new BigInteger(difficulty));
+        return (BigInteger) BigRational.Divide(new BigRational(KaspaConstants.Diff1Target), new BigRational(difficulty));
     }
 
     public static BigInteger CalculateTarget(uint bits)
@@ -89,12 +93,7 @@ public static class KaspaUtils
 
     public static double TargetToDifficulty(BigInteger target)
     {
-        return (double) new BigRational(KaspaConstants.Diff1Target, target);
-    }
-    
-    public static double DifficultyToHashrate(double diff)
-    {
-        return (double) new BigRational(BigInteger.Multiply(BigInteger.Multiply(KaspaConstants.MinHash, KaspaConstants.BigGig), new BigInteger(diff)), KaspaConstants.Diff1);
+        return (double) BigRational.Divide(new BigRational(KaspaConstants.Diff1Target), new BigRational(target));
     }
     
     public static double BigDiffToLittle(BigInteger diff)
@@ -172,16 +171,6 @@ public static class KaspaUtils
         }
 
         return compact;
-    }
-
-    public static double CalcWork(uint bits)
-    {
-        BigInteger difficultyNum = CompactToBig(bits);
-
-        if (difficultyNum.Sign <= 0)
-            return (double) BigInteger.Zero;
-        
-        return (double) new BigRational(KaspaConstants.OneLsh256, BigInteger.Add(difficultyNum, KaspaConstants.BigOne));
     }
 
     public static byte[] HashBlake2b(byte[] serializedScript)
@@ -345,106 +334,24 @@ public class KaspaAddressScriptHash : KaspaIAddress
 public class KaspaAddressUtility
 {
     public KaspaIAddress KaspaAddress { get; private set; }
-    public string CoinSymbol { get; private set; }
+    public KaspaCoinTemplate coin { get; private set; }
+
+    private Dictionary<string, KaspaBech32Prefix> stringsToBech32Prefixes;
     
-    public KaspaAddressUtility(string coinSymbol = "KAS")
+    public KaspaAddressUtility(KaspaCoinTemplate coin)
     {
-        this.CoinSymbol = coinSymbol;
+        Contract.RequiresNonNull(coin);
 
-        // Build address pattern based on network type and coin symbol
-        switch(this.CoinSymbol)
+        this.coin = coin;
+
+        // Build address pattern based on network type and KaspaCoinTemplate
+        this.stringsToBech32Prefixes = new Dictionary<string, KaspaBech32Prefix>
         {
-            case "BGA":
-                this.stringsToBech32Prefixes = new Dictionary<string, KaspaBech32Prefix>
-                {
-                    { BugnaConstants.ChainPrefixMainnet, KaspaBech32Prefix.KaspaMain },
-                    { BugnaConstants.ChainPrefixDevnet, KaspaBech32Prefix.KaspaDev },
-                    { BugnaConstants.ChainPrefixTestnet, KaspaBech32Prefix.KaspaTest },
-                    { BugnaConstants.ChainPrefixSimnet, KaspaBech32Prefix.KaspaSim },
-                };
-
-                break;
-            case "CAS":
-                this.stringsToBech32Prefixes = new Dictionary<string, KaspaBech32Prefix>
-                {
-                    { KaspaClassicConstants.ChainPrefixMainnet, KaspaBech32Prefix.KaspaMain },
-                    { KaspaClassicConstants.ChainPrefixDevnet, KaspaBech32Prefix.KaspaDev },
-                    { KaspaClassicConstants.ChainPrefixTestnet, KaspaBech32Prefix.KaspaTest },
-                    { KaspaClassicConstants.ChainPrefixSimnet, KaspaBech32Prefix.KaspaSim },
-                };
-
-                break;
-            case "HTN":
-                this.stringsToBech32Prefixes = new Dictionary<string, KaspaBech32Prefix>
-                {
-                    { HoosatConstants.ChainPrefixMainnet, KaspaBech32Prefix.KaspaMain },
-                    { HoosatConstants.ChainPrefixDevnet, KaspaBech32Prefix.KaspaDev },
-                    { HoosatConstants.ChainPrefixTestnet, KaspaBech32Prefix.KaspaTest },
-                    { HoosatConstants.ChainPrefixSimnet, KaspaBech32Prefix.KaspaSim },
-                };
-
-                break;
-            case "KLS":
-                this.stringsToBech32Prefixes = new Dictionary<string, KaspaBech32Prefix>
-                {
-                    { KarlsencoinConstants.ChainPrefixMainnet, KaspaBech32Prefix.KaspaMain },
-                    { KarlsencoinConstants.ChainPrefixDevnet, KaspaBech32Prefix.KaspaDev },
-                    { KarlsencoinConstants.ChainPrefixTestnet, KaspaBech32Prefix.KaspaTest },
-                    { KarlsencoinConstants.ChainPrefixSimnet, KaspaBech32Prefix.KaspaSim },
-                };
-
-                break;
-            case "NTL":
-                this.stringsToBech32Prefixes = new Dictionary<string, KaspaBech32Prefix>
-                {
-                    { NautilusConstants.ChainPrefixMainnet, KaspaBech32Prefix.KaspaMain },
-                    { NautilusConstants.ChainPrefixDevnet, KaspaBech32Prefix.KaspaDev },
-                    { NautilusConstants.ChainPrefixTestnet, KaspaBech32Prefix.KaspaTest },
-                    { NautilusConstants.ChainPrefixSimnet, KaspaBech32Prefix.KaspaSim },
-                };
-
-                break;
-            case "NXL":
-                this.stringsToBech32Prefixes = new Dictionary<string, KaspaBech32Prefix>
-                {
-                    { NexelliaConstants.ChainPrefixMainnet, KaspaBech32Prefix.KaspaMain },
-                    { NexelliaConstants.ChainPrefixDevnet, KaspaBech32Prefix.KaspaDev },
-                    { NexelliaConstants.ChainPrefixTestnet, KaspaBech32Prefix.KaspaTest },
-                    { NexelliaConstants.ChainPrefixSimnet, KaspaBech32Prefix.KaspaSim },
-                };
-
-                break;
-            case "PYI":
-                this.stringsToBech32Prefixes = new Dictionary<string, KaspaBech32Prefix>
-                {
-                    { PyrinConstants.ChainPrefixMainnet, KaspaBech32Prefix.KaspaMain },
-                    { PyrinConstants.ChainPrefixDevnet, KaspaBech32Prefix.KaspaDev },
-                    { PyrinConstants.ChainPrefixTestnet, KaspaBech32Prefix.KaspaTest },
-                    { PyrinConstants.ChainPrefixSimnet, KaspaBech32Prefix.KaspaSim },
-                };
-
-                break;
-            case "SDR":
-                this.stringsToBech32Prefixes = new Dictionary<string, KaspaBech32Prefix>
-                {
-                    { SedraCoinConstants.ChainPrefixMainnet, KaspaBech32Prefix.KaspaMain },
-                    { SedraCoinConstants.ChainPrefixDevnet, KaspaBech32Prefix.KaspaDev },
-                    { SedraCoinConstants.ChainPrefixTestnet, KaspaBech32Prefix.KaspaTest },
-                    { SedraCoinConstants.ChainPrefixSimnet, KaspaBech32Prefix.KaspaSim },
-                };
-
-                break;
-            default:
-                this.stringsToBech32Prefixes = new Dictionary<string, KaspaBech32Prefix>
-                {
-                    { KaspaConstants.ChainPrefixMainnet, KaspaBech32Prefix.KaspaMain },
-                    { KaspaConstants.ChainPrefixDevnet, KaspaBech32Prefix.KaspaDev },
-                    { KaspaConstants.ChainPrefixTestnet, KaspaBech32Prefix.KaspaTest },
-                    { KaspaConstants.ChainPrefixSimnet, KaspaBech32Prefix.KaspaSim },
-                };
-
-                break;
-        }
+            { this.coin.AddressBech32Prefix, KaspaBech32Prefix.KaspaMain },
+            { this.coin.AddressBech32PrefixDevnet, KaspaBech32Prefix.KaspaDev },
+            { this.coin.AddressBech32PrefixSimnet, KaspaBech32Prefix.KaspaSim },
+            { this.coin.AddressBech32PrefixTestnet, KaspaBech32Prefix.KaspaTest }
+        };
     }
 
     public string EncodeAddress(KaspaBech32Prefix prefix, byte[] payload, byte version)
@@ -499,8 +406,6 @@ public class KaspaAddressUtility
 
         return string.Empty;
     }
-
-    private Dictionary<string, KaspaBech32Prefix> stringsToBech32Prefixes;
 }
 
 public static class KaspaBech32

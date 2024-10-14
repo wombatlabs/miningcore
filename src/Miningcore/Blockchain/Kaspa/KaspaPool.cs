@@ -78,7 +78,18 @@ public class KaspaPool : PoolBase
                 "KaspaStratum/1.0.0",
             };
 
-            await connection.RespondAsync(data, request.Id);
+            // Nicehash's stupid validator insists on "error" property present
+            // in successful responses which is a violation of the JSON-RPC spec
+            // [Respect the goddamn standards Nicehack :(]
+            var response = new JsonRpcResponse<object[]>(data, request.Id);
+
+            if(context.IsNicehash || manager.ValidateIsGoldShell(context.UserAgent))
+            {
+                response.Extra = new Dictionary<string, object>();
+                response.Extra["error"] = null;
+            }
+
+            await connection.RespondAsync(response);
             await connection.NotifyAsync(KaspaStratumMethods.SetExtraNonce, manager.GetSubscriberData(connection));
         }
 
@@ -112,13 +123,13 @@ public class KaspaPool : PoolBase
         var workerName = split?.Skip(1).FirstOrDefault()?.Trim() ?? string.Empty;
 
         // assumes that minerName is an address
-        var (kaspaAddressUtility, errorKaspaAddressUtility) = KaspaUtils.ValidateAddress(minerName, manager.Network, coin.Symbol);
+        var (kaspaAddressUtility, errorKaspaAddressUtility) = KaspaUtils.ValidateAddress(minerName, manager.Network, coin);
         if (errorKaspaAddressUtility != null)
-            logger.Warn(() => $"[{connection.ConnectionId}] Unauthorized worker: {errorKaspaAddressUtility}");
+            logger.Warn(() => $"[{connection.ConnectionId}]{(!string.IsNullOrEmpty(context.UserAgent) ? $"[{context.UserAgent}]" : string.Empty)} Unauthorized worker: {errorKaspaAddressUtility}");
         else
         {
             context.IsAuthorized = true;
-            logger.Info(() => $"[{connection.ConnectionId}] worker: {minerName} => {KaspaConstants.KaspaAddressType[kaspaAddressUtility.KaspaAddress.Version()]}");
+            logger.Info(() => $"[{connection.ConnectionId}]{(!string.IsNullOrEmpty(context.UserAgent) ? $"[{context.UserAgent}]" : string.Empty)} worker: {minerName} => {KaspaConstants.KaspaAddressType[kaspaAddressUtility.KaspaAddress.Version()]}");
         }
 
         context.Miner = minerName;
@@ -126,8 +137,19 @@ public class KaspaPool : PoolBase
 
         if(context.IsAuthorized)
         {
+            // Nicehash's stupid validator insists on "error" property present
+            // in successful responses which is a violation of the JSON-RPC spec
+            // [Respect the goddamn standards Nicehack :(]
+            var response = new JsonRpcResponse<object>(context.IsAuthorized, request.Id);
+
+            if(context.IsNicehash || manager.ValidateIsGoldShell(context.UserAgent))
+            {
+                response.Extra = new Dictionary<string, object>();
+                response.Extra["error"] = null;
+            }
+
             // respond
-            await connection.RespondAsync(context.IsAuthorized, request.Id);
+            await connection.RespondAsync(response);
             
             // log association
             logger.Info(() => $"[{connection.ConnectionId}] Authorized worker {workerValue}");
@@ -156,12 +178,22 @@ public class KaspaPool : PoolBase
                (context.VarDiff != null && staticDiff.Value >= context.VarDiff.Config.MinDiff ||
                    context.VarDiff == null && staticDiff.Value > context.Difficulty))
             {
-                context.VarDiff = null; // disable vardiff
+                // There are several reports of IDIOTS mining with ridiculous amount of hashrate and maliciously using a very low staticDiff in order to attack mining pools.
+                // StaticDiff is now disabled by default for the KASPA family. Use it at your own risks.
+                if(extraPoolConfig.EnableStaticDifficulty)
+                    context.VarDiff = null; // disable vardiff
+
                 context.SetDifficulty(staticDiff.Value);
 
-                logger.Info(() => $"[{connection.ConnectionId}] Setting static difficulty of {staticDiff.Value}");
+                if(extraPoolConfig.EnableStaticDifficulty)
+                    logger.Info(() => $"[{connection.ConnectionId}] Setting static difficulty of {staticDiff.Value}");
+                else
+                    logger.Warn(() => $"[{connection.ConnectionId}] Requesting static difficulty of {staticDiff.Value} (Request has been ignored and instead used as 'initial difficulty' for varDiff)");
             }
-            
+
+            // send initial difficulty
+            await connection.NotifyAsync(KaspaStratumMethods.SetDifficulty, new object[] { context.Difficulty });
+
             // send intial job
             await SendJob(connection, context, currentJobParams);
         }
@@ -214,7 +246,18 @@ public class KaspaPool : PoolBase
 
             // submit
             var share = await manager.SubmitShareAsync(connection, requestParams, ct);
-            await connection.RespondAsync(true, request.Id);
+
+            // Nicehash's stupid validator insists on "error" property present
+            // in successful responses which is a violation of the JSON-RPC spec
+            // [Respect the goddamn standards Nicehack :(]
+            var response = new JsonRpcResponse<object>(true, request.Id);
+
+            if(context.IsNicehash || manager.ValidateIsGoldShell(context.UserAgent))
+            {
+                response.Extra = new Dictionary<string, object>();
+                response.Extra["error"] = null;
+            }
+            await connection.RespondAsync(response);
 
             // publish
             messageBus.SendMessage(share);
@@ -222,7 +265,7 @@ public class KaspaPool : PoolBase
             // telemetry
             PublishTelemetry(TelemetryCategory.Share, clock.Now - tsRequest.Timestamp.UtcDateTime, true);
 
-            logger.Info(() => $"[{connection.ConnectionId}] Share accepted: D={Math.Round(share.Difficulty * KaspaConstants.ShareMultiplier, 3)}");
+            logger.Info(() => $"[{connection.ConnectionId}] Share accepted: D={Math.Round(share.Difficulty * coin.ShareMultiplier, 3)}");
 
             // update pool stats
             if(share.IsBlockCandidate)
@@ -259,7 +302,11 @@ public class KaspaPool : PoolBase
         await Guard(() => ForEachMinerAsync(async (connection, ct) =>
         {
             var context = connection.ContextAs<KaspaWorkerContext>();
-            
+
+            // varDiff: if the client has a pending difficulty change, apply it now
+            if(context.ApplyPendingDifficulty())
+                await connection.NotifyAsync(KaspaStratumMethods.SetDifficulty, new object[] { context.Difficulty });
+
             await SendJob(connection, context, currentJobParams);
         }));
     }
@@ -282,9 +329,6 @@ public class KaspaPool : PoolBase
                 jobParams[3],
             };
         }
-        
-        // send difficulty
-        await connection.NotifyAsync(KaspaStratumMethods.SetDifficulty, new object[] { context.Difficulty });
 
         // send job
         await connection.NotifyAsync(KaspaStratumMethods.MiningNotify, jobParamsActual);
@@ -292,13 +336,13 @@ public class KaspaPool : PoolBase
 
     public override double HashrateFromShares(double shares, double interval)
     {
-        var multiplier = KaspaConstants.Pow2xDiff1TargetNumZero * (double) KaspaConstants.MinHash;
+        var multiplier = coin.HashrateMultiplier;
         var result = shares * multiplier / interval;
 
         return result;
     }
 
-    public override double ShareMultiplier => KaspaConstants.ShareMultiplier;
+    public override double ShareMultiplier => coin.ShareMultiplier;
 
     #region Overrides
 
@@ -422,6 +466,9 @@ public class KaspaPool : PoolBase
 
         if(context.ApplyPendingDifficulty())
         {
+            // send difficulty
+            await connection.NotifyAsync(KaspaStratumMethods.SetDifficulty, new object[] { context.Difficulty });
+
             // send job
             await SendJob(connection, context, currentJobParams);
         }

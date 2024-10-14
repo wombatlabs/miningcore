@@ -371,10 +371,79 @@
     <ClInclude Include="minotaur\minotaurx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="fishhash\3rdParty\keccak.h">
+    <ClInclude Include="fishhash\3rdParty\fishhash_keccak.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="fishhash\fishhash.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flex\flex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flex\cryptonote\cryptonight.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flex\cryptonote\cryptonight_dark.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flex\cryptonote\cryptonight_dark_lite.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flex\cryptonote\cryptonight_fast.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flex\cryptonote\cryptonight_lite.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flex\cryptonote\cryptonight_soft_shell.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flex\cryptonote\cryptonight_turtle.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flex\cryptonote\cryptonight_turtle_lite.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flex\cryptonote\crypto\c_blake256.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flex\cryptonote\crypto\c_groestl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flex\cryptonote\crypto\c_jh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flex\cryptonote\crypto\c_keccak.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flex\cryptonote\crypto\c_skein.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flex\cryptonote\crypto\crypto.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flex\cryptonote\crypto\groestl_tables.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flex\cryptonote\crypto\hash-ops.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flex\cryptonote\crypto\hash.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flex\cryptonote\crypto\int-util.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flex\cryptonote\crypto\oaes_lib.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flex\cryptonote\crypto\skein_port.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flex\cryptonote\crypto\variant2_int_sqrt.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="flex\cryptonote\crypto\wild_keccak.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -715,10 +784,64 @@
     <ClCompile Include="minotaur\minotaurx.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="fishhash\3rdParty\keccak.c">
+    <ClCompile Include="fishhash\3rdParty\fishhash_keccak.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="fishhash\fishhash.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="flex\flex.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="flex\cryptonote\cryptonight.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="flex\cryptonote\cryptonight_dark.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="flex\cryptonote\cryptonight_dark_lite.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="flex\cryptonote\cryptonight_fast.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="flex\cryptonote\cryptonight_lite.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="flex\cryptonote\cryptonight_soft_shell.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="flex\cryptonote\cryptonight_turtle.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="flex\cryptonote\cryptonight_turtle_lite.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="flex\cryptonote\crypto\aesb.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="flex\cryptonote\crypto\c_blake256.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="flex\cryptonote\crypto\c_groestl.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="flex\cryptonote\crypto\c_jh.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="flex\cryptonote\crypto\c_keccak.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="flex\cryptonote\crypto\c_skein.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="flex\cryptonote\crypto\hash.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="flex\cryptonote\crypto\oaes_lib.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="flex\cryptonote\crypto\wild_keccak.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

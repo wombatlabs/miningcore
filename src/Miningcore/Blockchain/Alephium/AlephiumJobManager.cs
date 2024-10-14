@@ -54,6 +54,7 @@ public class AlephiumJobManager : JobManagerBase<AlephiumJob>
     private AlephiumPaymentProcessingConfigExtra extraPoolPaymentProcessingConfig;
     protected int maxActiveJobs;
     private int socketJobMessageBufferSize;
+    private int socketMiningProtocol = 0;
     
     protected IObservable<AlephiumBlockTemplate[]> AlephiumSubscribeStratumApiSocketClient(CancellationToken ct, DaemonEndpointConfig endPoint,
         AlephiumDaemonEndpointConfigExtra extraDaemonEndpoint, object payload = null,
@@ -92,6 +93,7 @@ public class AlephiumJobManager : JobManagerBase<AlephiumJob>
                             int receivedBytes;
 
                             // Message
+                            byte messageVersion = AlephiumConstants.MiningProtocolVersion; // only available since node release >= "3.6.0"
                             byte messageType;
                             uint messageLength;
 
@@ -106,6 +108,7 @@ public class AlephiumJobManager : JobManagerBase<AlephiumJob>
                             uint jobSize;
                             int fromGroup;
                             int toGroup;
+                            ulong height = 0;
                             uint headerBlobLength;
                             byte[] headerBlob;
                             uint txsBlobLength;
@@ -141,8 +144,14 @@ public class AlephiumJobManager : JobManagerBase<AlephiumJob>
 
                                             if (bufferArray.Length >= messageLength + AlephiumConstants.MessageHeaderSize)
                                             {
+                                                if(socketMiningProtocol > 0)
+                                                {
+                                                    messageVersion = reader.ReadByte();
+                                                    logger.Debug(() => $"Message version: {messageVersion}");
+                                                }
+
                                                 messageType = reader.ReadByte();
-                                                if (messageType == AlephiumConstants.JobsMessageType)
+                                                if (messageVersion == AlephiumConstants.MiningProtocolVersion && messageType == AlephiumConstants.JobsMessageType)
                                                 {
                                                     jobSize = ReadBigEndianUInt32(reader);
                                                     logger.Debug(() => $"Parsing {jobSize} job(s) :D");
@@ -156,8 +165,12 @@ public class AlephiumJobManager : JobManagerBase<AlephiumJob>
                                                         toGroup = (int)ReadBigEndianUInt32(reader);
                                                         logger.Debug(() => $"fromGroup: {fromGroup} - toGroup: {toGroup}");
 
-                                                        chainInfo = await rpc.GetBlockflowChainInfoAsync(fromGroup, toGroup, cts.Token);
-                                                        logger.Debug(() => $"Height: {chainInfo?.CurrentHeight + 1}");
+                                                        if(socketMiningProtocol == 0)
+                                                        {
+                                                            chainInfo = await rpc.GetBlockflowChainInfoAsync(fromGroup, toGroup, cts.Token);
+                                                            height = (ulong) chainInfo?.CurrentHeight + 1;
+                                                            logger.Debug(() => $"height: {height}");
+                                                        }
 
                                                         headerBlobLength = ReadBigEndianUInt32(reader);
                                                         logger.Debug(() => $"headerBlobLength: {headerBlobLength}");
@@ -174,10 +187,16 @@ public class AlephiumJobManager : JobManagerBase<AlephiumJob>
                                                         targetBlob = reader.ReadBytes((int)targetLength);
                                                         logger.Debug(() => $"targetBlob: {targetBlob.ToHexString()}");
 
+                                                        if(socketMiningProtocol > 0)
+                                                        {
+                                                            height = (ulong)ReadBigEndianUInt32(reader);
+                                                            logger.Debug(() => $"height: {height}");
+                                                        }
+
                                                         alephiumBlockTemplate[index] = new AlephiumBlockTemplate
                                                         {
                                                             JobId = NextJobId("X"),
-                                                            Height = (ulong) chainInfo?.CurrentHeight + 1,
+                                                            Height = height,
                                                             Timestamp = clock.Now,
                                                             FromGroup = fromGroup,
                                                             ToGroup = toGroup,
@@ -196,7 +215,7 @@ public class AlephiumJobManager : JobManagerBase<AlephiumJob>
                                                 }
                                                 else
                                                 {
-                                                    logger.Debug(() => $"Unknown message type, wait for more data...");
+                                                    logger.Warn(() => $"Message version: {messageVersion}, expects {AlephiumConstants.MiningProtocolVersion} - Message type: {messageType}, expects {AlephiumConstants.JobsMessageType}, wait for more data...");
                                                     break;
                                                 }
                                             }
@@ -431,8 +450,10 @@ public class AlephiumJobManager : JobManagerBase<AlephiumJob>
             int receivedBytes;
 
             // Message
+            int messageTypeOffset;
             byte messageType;
             int startOffset;
+            int succeedIndex;
             byte[] message;
 
             logger.Debug(() => $"[Submit Block] - Submitting coinbase");
@@ -444,15 +465,17 @@ public class AlephiumJobManager : JobManagerBase<AlephiumJob>
             {
                 logger.Debug(() => $"{receivedBytes} byte(s) of data have been received");
 
-                messageType = receiveBuffer[AlephiumConstants.MessageHeaderSize];
+                messageTypeOffset = (socketMiningProtocol > 0) ? 1: 0; // socketMiningProtocol: 0 => messageType(1 byte) || socketMiningProtocol: 1 => version(1 byte) + messageType(1 byte)
+                messageType = receiveBuffer[AlephiumConstants.MessageHeaderSize + messageTypeOffset];
                 if (messageType == AlephiumConstants.SubmitResultMessageType)
                 {
                     logger.Debug(() => $"[Submit Block] - Response received :D");
-                    startOffset = AlephiumConstants.MessageHeaderSize + 1; // 1 byte message type
+                    startOffset = AlephiumConstants.MessageHeaderSize + messageTypeOffset + 1; // 1 byte
                     message = new byte[receivedBytes - startOffset];
                     Buffer.BlockCopy(receiveBuffer, startOffset, message, 0, receivedBytes - startOffset);
 
-                    succeed = (message[8] == 1);
+                    succeedIndex = (socketMiningProtocol > 0) ? 40: 8; // socketMiningProtocol: 0 => succeed: index[8] || socketMiningProtocol: 1 => succeed: index[40]
+                    succeed = (message[succeedIndex] == 1);
                     break;
                 }
             }
@@ -535,7 +558,7 @@ public class AlephiumJobManager : JobManagerBase<AlephiumJob>
             // Prepare data for the stratum API socket
             var daemonEndpoint = daemonEndpoints.First();
             var extraDaemonEndpoint = daemonEndpoint.Extra.SafeExtensionDataAs<AlephiumDaemonEndpointConfigExtra>();
-            var jobCoinbase = job.SerializeCoinbase(nonce);
+            var jobCoinbase = job.SerializeCoinbase(nonce, socketMiningProtocol);
 
             var acceptResponse = await SubmitBlockAsync(ct, daemonEndpoint,
                 extraDaemonEndpoint, jobCoinbase);
@@ -724,7 +747,17 @@ public class AlephiumJobManager : JobManagerBase<AlephiumJob>
         
         // update stats
         if(!string.IsNullOrEmpty(nodeInfo?.BuildInfo.ReleaseVersion))
-            BlockchainStats.NodeVersion = nodeInfo?.BuildInfo.ReleaseVersion;
+        {
+            BlockchainStats.NodeVersion = nodeInfo.BuildInfo.ReleaseVersion;
+
+            // update socket mining protocol
+            string numbersOnly = Regex.Replace(nodeInfo.BuildInfo.ReleaseVersion, "[^0-9.]", "");
+            string[] numbers = numbersOnly.Split(".");
+
+            // update socket mining protocol
+            if(numbers.Length >= 2)
+                socketMiningProtocol = ((Convert.ToUInt32(numbers[0]) > 3) || (Convert.ToUInt32(numbers[0]) == 3 && Convert.ToUInt32(numbers[1]) >= 6)) ? 1: 0;
+        }
 
         if(infosChainParams?.NetworkId != 7)
             return info?.Count > 0;
