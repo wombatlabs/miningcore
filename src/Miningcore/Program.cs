@@ -636,6 +636,7 @@ public class Program : BackgroundService
         Console.WriteLine(" CCX  - ccx7S4B3gBeH1SGWCfqZp3NM7Vavg7H3S8ovJn8fU4bwC4vU7ChWfHtbNzifhrpbJ74bMDxj4KZFTcznTfsucCEg1Kgv7zbNgs");
         Console.WriteLine(" FIRO - a5AsoTSkfPHQ3SUmR6binG1XW7oQQoFNU1");
         Console.WriteLine(" ERGO - 9gYyuZzaSw3TiCtUkSRuS3XVDUv41EFs3dtNCFGqiEwHqpb7gkF");
+        Console.WriteLine(" WART - 7795fc0fe93e7e4e232a212f00bdc8885c580a5666d39a0d");
         Console.WriteLine(" XMR  - 483zaHtMRfM7rw1dXgebhWaRR8QLgAF6w4BomAV319FVVHfdbYTLVuBRc4pQgRAnRpfy6CXvvwngK4Lo3mRKE29RRx3Jb5c");
         Console.WriteLine();
     }

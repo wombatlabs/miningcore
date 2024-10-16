@@ -26,7 +26,10 @@ OBJECTS = include/highwayhash/arch_specific.o include/highwayhash/c_bindings.o i
         include/libsais/libsais.o 
 
 ifeq ($(UNAME_P),x86_64)
-        OBJECTS += include/highwayhash/hh_avx2.o include/highwayhash/hh_sse41.o 
+        ifneq (,$(findstring -DHAVE_AVX2,$(HAVE_FEATURE)))
+                OBJECTS += include/highwayhash/hh_avx2.o 
+        endif
+        OBJECTS += include/highwayhash/hh_sse41.o 
 else ifneq ($($(UNAME_P),aarch64),$($(UNAME_P),arm64))
         OBJECTS += include/highwayhash/hh_neon.o 
 else

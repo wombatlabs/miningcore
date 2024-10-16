@@ -239,4 +239,5 @@ To support this project you can become a [sponsor]( https://github.com/sponsors/
 * CCX:  `ccx7S4B3gBeH1SGWCfqZp3NM7Vavg7H3S8ovJn8fU4bwC4vU7ChWfHtbNzifhrpbJ74bMDxj4KZFTcznTfsucCEg1Kgv7zbNgs`
 * FIRO: `a5AsoTSkfPHQ3SUmR6binG1XW7oQQoFNU1`
 * ERGO: `9gYyuZzaSw3TiCtUkSRuS3XVDUv41EFs3dtNCFGqiEwHqpb7gkF`
+* WART:  `7795fc0fe93e7e4e232a212f00bdc8885c580a5666d39a0d`
 * XMR:  `483zaHtMRfM7rw1dXgebhWaRR8QLgAF6w4BomAV319FVVHfdbYTLVuBRc4pQgRAnRpfy6CXvvwngK4Lo3mRKE29RRx3Jb5c`
