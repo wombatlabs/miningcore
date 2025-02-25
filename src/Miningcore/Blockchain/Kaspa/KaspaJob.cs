@@ -388,3 +388,53 @@ public class KaspaJob
         };
     }
 }
+
+public class KaspaJobAltKHeavy : KaspaJob
+{
+    public KaspaJobAltKHeavy(IHashAlgorithm customBlockHeaderHasher, IHashAlgorithm customCoinbaseHasher, IHashAlgorithm customShareHasher)
+      : base(customBlockHeaderHasher, customCoinbaseHasher, customShareHasher)
+    {
+    }
+
+    protected override Span<byte> ComputeCoinbase(Span<byte> prePowHash, Span<byte> data)
+    {
+        ushort[][] matrix = GenerateMatrix(prePowHash);
+        byte[] scratch = data.ToArray(); // Create a copy to work with
+        
+        // Convert bytes to nibbles
+        ushort[] v = new ushort[64];
+        for (int i = 0; i < 16; i++)
+        {
+            v[i * 4] = (ushort)(scratch[i * 2] >> 4);
+            v[i * 4 + 1] = (ushort)(scratch[i * 2] & 0x0F);
+            v[i * 4 + 2] = (ushort)(scratch[i * 2 + 1] >> 4);
+            v[i * 4 + 3] = (ushort)(scratch[i * 2 + 1] & 0x0F);
+        }
+
+        // Perform matrix multiplication with XOR folding
+        for (int i = 0; i < 16; i++)
+        {
+            ushort sum1 = 0, sum2 = 0, sum3 = 0, sum4 = 0;
+
+            for (int j = 0; j < 64; j++)
+            {
+                sum1 += (ushort)(matrix[4 * i][j] * v[j]);
+                sum2 += (ushort)(matrix[4 * i + 1][j] * v[j]);
+                sum3 += (ushort)(matrix[4 * i + 2][j] * v[j]);
+                sum4 += (ushort)(matrix[4 * i + 3][j] * v[j]);
+            }
+            
+            // XOR folding of sums
+            sum1 = (ushort)((sum1 & 0xF) ^ ((sum1 >> 4) & 0xF) ^ ((sum1 >> 8) & 0xF));
+            sum2 = (ushort)((sum2 & 0xF) ^ ((sum2 >> 4) & 0xF) ^ ((sum2 >> 8) & 0xF));
+            sum3 = (ushort)((sum3 & 0xF) ^ ((sum3 >> 4) & 0xF) ^ ((sum3 >> 8) & 0xF));
+            sum4 = (ushort)((sum4 & 0xF) ^ ((sum4 >> 4) & 0xF) ^ ((sum4 >> 8) & 0xF));
+
+            // XOR with original data
+            scratch[i * 2] ^= (byte)(((byte)sum1 << 4) | (byte)sum2);
+            scratch[i * 2 + 1] ^= (byte)(((byte)sum3 << 4) | (byte)sum4);
+        }
+        
+        return scratch;
+    }
+}

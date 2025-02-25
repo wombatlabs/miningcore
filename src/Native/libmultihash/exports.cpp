@@ -66,6 +66,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "shake/shake.h"
 #include "flex/flex.h"
 #include "xelishash/xelishash.hpp"
+#include "sha3_wala.h"
 
 #ifdef _WIN32
 #include "blake2/ref/blake2.h"
