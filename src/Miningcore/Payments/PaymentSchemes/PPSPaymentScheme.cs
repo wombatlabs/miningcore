@@ -1,179 +1,108 @@
 using System.Data;
-using System.Data.Common;
-using System.Net.Sockets;
-using Miningcore.Configuration;
-using Miningcore.Extensions;
 using Miningcore.Mining;
-using Miningcore.Persistence;
 using Miningcore.Persistence.Model;
 using Miningcore.Persistence.Repositories;
+using Miningcore.Extensions;
 using Miningcore.Util;
 using NLog;
 using Polly;
 using Contract = Miningcore.Contracts.Contract;
 
-namespace Miningcore.Payments.PaymentSchemes;
-
-/// <summary>
-/// PPS payout scheme implementation
-/// </summary>
-// ReSharper disable once InconsistentNaming
-public class PPSPaymentScheme : IPayoutScheme
+namespace Miningcore.Payments.PaymentSchemes
 {
-    public PPSPaymentScheme(
-        IConnectionFactory cf,
-        IShareRepository shareRepo,
-        IBalanceRepository balanceRepo,
-        IBlockRepository blockRepo)
+    public class PPSPaymentScheme : IPayoutScheme
     {
-        Contract.RequiresNonNull(cf);
-        Contract.RequiresNonNull(shareRepo);
-        Contract.RequiresNonNull(balanceRepo);
-        Contract.RequiresNonNull(blockRepo);
+        private readonly IBalanceRepository balanceRepo;
+        private readonly IShareRepository shareRepo;
+        private readonly IConnectionFactory cf;
+        private static readonly ILogger logger = LogManager.GetLogger("PPS Payment");
+        private const int RetryCount = 4;
+        private IAsyncPolicy shareReadFaultPolicy;
 
-        this.cf = cf;
-        this.shareRepo = shareRepo;
-        this.balanceRepo = balanceRepo;
-        this.blockRepo = blockRepo;
-
-        BuildFaultHandlingPolicy();
-    }
-
-    private readonly IBalanceRepository balanceRepo;
-    private readonly IBlockRepository blockRepo;
-    private readonly IConnectionFactory cf;
-    private readonly IShareRepository shareRepo;
-    private static readonly ILogger logger = LogManager.GetLogger("PPS Payment");
-
-    private const int RetryCount = 4;
-    private IAsyncPolicy shareReadFaultPolicy;
-
-    private class Config
-    {
-        public decimal PayoutPerShare { get; set; } // Fixed PPS payout per valid share (fallback)
-    }
-
-    #region IPayoutScheme
-
-    public async Task UpdateBalancesAsync(IDbConnection con, IDbTransaction tx, IMiningPool pool, IPayoutHandler payoutHandler, CancellationToken ct)
-    {
-        var poolConfig = pool.Config;
-        var payoutConfig = poolConfig.PaymentProcessing.PayoutSchemeConfig;
-
-        // Fetch the latest mined block to determine network difficulty
-        var latestBlock = await blockRepo.GetLatestBlockAsync(con, poolConfig.Id, ct);
-        if (latestBlock == null)
+        public PPSPaymentScheme(
+            IConnectionFactory cf,
+            IShareRepository shareRepo,
+            IBalanceRepository balanceRepo)
         {
-            logger.Warn(() => "No blocks found. PPS payout cannot be calculated.");
-            return;
+            Contract.RequiresNonNull(cf);
+            Contract.RequiresNonNull(shareRepo);
+            Contract.RequiresNonNull(balanceRepo);
+
+            this.cf = cf;
+            this.shareRepo = shareRepo;
+            this.balanceRepo = balanceRepo;
+            BuildFaultHandlingPolicy();
         }
 
-        // Calculate PPS payout per share dynamically based on network difficulty
-        var payoutPerShare = CalculatePayoutPerShare(latestBlock.Reward, latestBlock.NetworkDifficulty);
-
-        // Use the config fallback if the dynamic calculation fails
-        payoutPerShare = payoutPerShare > 0 ? payoutPerShare : payoutConfig?.ToObject<Config>()?.PayoutPerShare ?? 0m;
-
-        if (payoutPerShare <= 0)
+        public async Task UpdateBalancesAsync(
+            IDbConnection con,
+            IDbTransaction tx,
+            IMiningPool pool,
+            IPayoutHandler payoutHandler,
+            Block block,
+            decimal blockReward,
+            CancellationToken ct)
         {
-            logger.Error(() => "PPS payout per share is not set correctly. Check pool configuration.");
-            return;
-        }
+            var poolConfig = pool.Config;
+            var pageSize = 100_000;
+            var before = block.Created;
+            var inclusive = true;
 
-        // Retrieve shares
-        var shares = new Dictionary<string, double>();
-        var rewards = new Dictionary<string, decimal>();
-        await CalculateRewardsAsync(pool, payoutHandler, payoutPerShare, shares, rewards, ct);
+            var rewards = new Dictionary<string, decimal>();
+            var shares  = new Dictionary<string, decimal>();
 
-        // Update miner balances
-        foreach (var address in rewards.Keys)
-        {
-            var amount = rewards[address];
-
-            if (amount > 0)
+            // iterate shares up to this block
+            while(true)
             {
-                logger.Info(() => $"Crediting {address} with {payoutHandler.FormatAmount(amount)} for {FormatUtil.FormatQuantity(shares[address])} shares.");
-                await balanceRepo.AddAmountAsync(con, tx, poolConfig.Id, address, amount, $"PPS Reward for shares contributed.");
-            }
-        }
-    }
+                var page = await shareReadFaultPolicy.ExecuteAsync(() =>
+                    cf.Run(db => shareRepo.ReadSharesBeforeAsync(db, poolConfig.Id, before, inclusive, pageSize, ct)));
 
-    private async Task CalculateRewardsAsync(IMiningPool pool, IPayoutHandler payoutHandler, decimal payoutPerShare,
-        Dictionary<string, double> shares, Dictionary<string, decimal> rewards, CancellationToken ct)
-    {
-        var poolConfig = pool.Config;
-        var before = DateTime.UtcNow;
-        var pageSize = 50000;
-        var totalShares = 0.0m;
+                if(page.Length == 0)
+                    break;
 
-        while (!ct.IsCancellationRequested)
-        {
-            var page = await shareReadFaultPolicy.ExecuteAsync(() =>
-                cf.Run(con => shareRepo.ReadRecentSharesAsync(con, poolConfig.Id, before, pageSize, ct)));
+                inclusive = false;
+                foreach(var share in page)
+                {
+                    var miner = share.Miner;
+                    var adjustedDiff = payoutHandler.AdjustShareDifficulty(share.Difficulty);
 
-            foreach (var share in page)
-            {
-                var address = share.Miner;
-                var shareDiffAdjusted = payoutHandler.AdjustShareDifficulty(share.Difficulty);
+                    // PPS pays per share immediately:
+                    // shareValue = difficulty * blockReward / networkDifficulty
+                    var reward = adjustedDiff * blockReward / share.NetworkDifficulty;
+                    if(reward <= 0)
+                        continue;
 
-                if (!shares.ContainsKey(address))
-                    shares[address] = shareDiffAdjusted;
-                else
-                    shares[address] += shareDiffAdjusted;
+                    rewards[miner] = rewards.GetValueOrDefault(miner) + reward;
+                    shares[miner]  = shares.GetValueOrDefault(miner)  + adjustedDiff;
+                }
 
-                totalShares += (decimal)shareDiffAdjusted;
+                before = page[^1].Created;
+                if(page.Length < pageSize)
+                    break;
             }
 
-            if (page.Length < pageSize)
-                break;
-
-            before = page[^1].Created;
-        }
-
-        // Distribute rewards per share
-        if (totalShares > 0)
-        {
-            foreach (var address in shares.Keys)
+            // credit balances
+            foreach(var (miner, amount) in rewards)
             {
-                var minerReward = (decimal)shares[address] * payoutPerShare;
-
-                if (minerReward > 0)
-                    rewards[address] = minerReward;
+                logger.Info(() =>
+                    $"Crediting {miner} with {payoutHandler.FormatAmount(amount)} " +
+                    $"for {FormatUtil.FormatQuantity(shares[miner])} shares");
+                await balanceRepo.AddAmountAsync(
+                    con, tx, poolConfig.Id, miner, amount,
+                    $"PPS reward for {FormatUtil.FormatQuantity(shares[miner])} shares for block {block.BlockHeight}");
             }
+
+            // clean up old shares
+            if(before > block.Created)
+                await shareRepo.DeleteSharesBeforeAsync(con, tx, poolConfig.Id, block.Created, ct);
         }
-        else
+
+        private void BuildFaultHandlingPolicy()
         {
-            logger.Warn(() => "No valid shares found. Skipping PPS payout calculation.");
+            shareReadFaultPolicy = Policy
+                .Handle<Exception>()
+                .RetryAsync(RetryCount, (ex, retry) =>
+                    logger.Warn($"Retry {retry} due to {ex.GetType().Name}: {ex.Message}"));
         }
     }
-
-    private decimal CalculatePayoutPerShare(decimal blockReward, decimal networkDifficulty)
-    {
-        if (networkDifficulty <= 0)
-        {
-            logger.Warn(() => "Network difficulty is zero or negative. Using fallback PPS payout per share.");
-            return 0m;
-        }
-
-        // PPS formula: Block reward divided by network difficulty
-        return blockReward / networkDifficulty;
-    }
-
-    private void BuildFaultHandlingPolicy()
-    {
-        var retry = Policy
-            .Handle<DbException>()
-            .Or<SocketException>()
-            .Or<TimeoutException>()
-            .RetryAsync(RetryCount, OnPolicyRetry);
-
-        shareReadFaultPolicy = retry;
-    }
-
-    private static void OnPolicyRetry(Exception ex, int retry, object context)
-    {
-        logger.Warn(() => $"Retry {retry} due to {ex.Source}: {ex.GetType().Name} ({ex.Message})");
-    }
-
-    #endregion // IPayoutScheme
 }
