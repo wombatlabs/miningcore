@@ -1,6 +1,7 @@
 ## ShareRelaysReadMe.md
 
 **Composed by:** DankMiner  
+**Updated by:** wombatlabs
 **Inspiration:** Based on insights and studies from the miningcore GitHub repository.
 
 ---
@@ -45,6 +46,13 @@ In your primary server’s configuration file—typically `config.json`—you’
 
 1. **Replace the URL:** For each entry, change the IP address (`207.244.250.69`, `154.53.39.114`, `66.94.123.222`, etc.) with the actual IP address or domain name of the stratum server.
 2. **Update the shared encryption key:** Change the value for `"sharedEncryptionKey"` from `"password"` to your unique key. This shared key is critical for ensuring that both the primary and stratum servers can authenticate each other securely.
+3. **(optional) Enable internal stratum on primary:** Add `"enableInternalStratum": true,` to each coin's config like so:
+```bash
+"id": "btc",
+"enabled": true,
+"coin": "bitcoin",
+"enableInternalStratum": true,
+```
 
 #### On Each Stratum Server
 
