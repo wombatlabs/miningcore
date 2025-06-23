@@ -1,5 +1,6 @@
 using System.Data;
 using Miningcore.Mining;
+using Miningcore.Persistence;
 using Miningcore.Persistence.Model;
 using Miningcore.Persistence.Repositories;
 using Miningcore.Extensions;
