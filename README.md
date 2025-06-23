@@ -18,6 +18,7 @@
 - POW (proof-of-work) & POS (proof-of-stake) support
 - Detailed per-pool logging to console & filesystem
 - Runs on Linux and Windows
+- Multiple payment schemes: PPLNS, PROP, SOLO, PPS, and FPPS (PPS and FPPS are untested. Use at your own risk.)
 
 ## Support
 
