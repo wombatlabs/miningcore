@@ -36,22 +36,14 @@ namespace Miningcore.Payments.PaymentSchemes
         }
 
         public async Task UpdateBalancesAsync(
-            IDbConnection con,
-            IDbTransaction tx,
-            IMiningPool pool,
-            IPayoutHandler payoutHandler,
-            Block block,
-            decimal blockReward,
-            CancellationToken ct)
+            IDbConnection con, IDbTransaction tx,
+            IMiningPool pool, IPayoutHandler payoutHandler,
+            Block block, decimal blockReward, CancellationToken ct)
         {
             var poolConfig = pool.Config;
-            // total pool revenue = subsidy + tx fees + optional donations
-            var feeReward = block.TransactionFees + block.DonationFee;
-            var totalReward = blockReward + feeReward;
-
-            var pageSize = 100_000;
-            var before = block.Created;
-            var inclusive = true;
+            var pageSize   = 100_000;
+            var before     = block.Created;
+            var inclusive  = true;
 
             var rewards = new Dictionary<string, decimal>();
             var shares  = new Dictionary<string, decimal>();
@@ -59,7 +51,8 @@ namespace Miningcore.Payments.PaymentSchemes
             while(true)
             {
                 var page = await shareReadFaultPolicy.ExecuteAsync(() =>
-                    cf.Run(db => shareRepo.ReadSharesBeforeAsync(db, poolConfig.Id, before, inclusive, pageSize, ct)));
+                    cf.Run(db => shareRepo.ReadSharesBeforeAsync(db,
+                        poolConfig.Id, before, inclusive, pageSize, ct)));
 
                 if(page.Length == 0)
                     break;
@@ -67,11 +60,16 @@ namespace Miningcore.Payments.PaymentSchemes
                 inclusive = false;
                 foreach(var share in page)
                 {
-                    var miner = share.Miner;
-                    var adjustedDiff = payoutHandler.AdjustShareDifficulty(share.Difficulty);
+                    var miner        = share.Miner;
+                    // cast to decimal so we stay in one domain
+                    var adjustedDiff = (decimal)payoutHandler.AdjustShareDifficulty(share.Difficulty);
+                    var networkDiff  = (decimal)share.NetworkDifficulty;
 
-                    // FPPS pays per share on entire pool revenue
-                    var reward = adjustedDiff * totalReward / share.NetworkDifficulty;
+                    // for PPS, totalReward = blockReward
+                    // for FPPS, blockReward already includes fees
+                    var totalReward = blockReward;
+
+                    var reward = adjustedDiff * totalReward / networkDiff;
                     if(reward <= 0)
                         continue;
 
@@ -88,14 +86,15 @@ namespace Miningcore.Payments.PaymentSchemes
             {
                 logger.Info(() =>
                     $"Crediting {miner} with {payoutHandler.FormatAmount(amount)} " +
-                    $"for {FormatUtil.FormatQuantity(shares[miner])} shares (FPPS)");
+                    $"for {FormatUtil.FormatQuantity(shares[miner])} shares");
                 await balanceRepo.AddAmountAsync(
                     con, tx, poolConfig.Id, miner, amount,
-                    $"FPPS reward for {FormatUtil.FormatQuantity(shares[miner])} shares for block {block.BlockHeight}");
+                    $"Reward for {FormatUtil.FormatQuantity(shares[miner])} shares for block {block.BlockHeight}");
             }
 
             if(before > block.Created)
-                await shareRepo.DeleteSharesBeforeAsync(con, tx, poolConfig.Id, block.Created, ct);
+                await shareRepo.DeleteSharesBeforeAsync(
+                    con, tx, poolConfig.Id, block.Created, ct);
         }
 
         private void BuildFaultHandlingPolicy()
