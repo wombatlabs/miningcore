@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Miningcore.Blockchain.Equihash.DaemonResponses;
 
@@ -29,8 +30,23 @@ public class EquihashBlockTemplate : Bitcoin.DaemonResponses.BlockTemplate
 
     public ZCashBlockSubsidy Subsidy { get; set; }
 
-    [JsonProperty("finalsaplingroothash")]
+    //[JsonProperty("finalsaplingroothash")]
+    //public string FinalSaplingRootHash { get; set; }
+
+    [JsonProperty("finalsaplingroot")]
     public string FinalSaplingRootHash { get; set; }
+
+    // Orchard anchor (NU5)
+    [JsonProperty("finalorchardroot")]
+    public string FinalOrchardRootHash { get; set; }
+
+    // Holds both authdataroot and blockcommitmentshash
+    [JsonProperty("defaultroots")]
+    public JObject DefaultRoots { get; set; }
+
+    // Filled at runtime from DefaultRoots["authdataroot"] or ["blockcommitmentshash"]
+    [JsonIgnore]
+    public string BlockCommitmentsHash { get; set; }
     
     // Veruscoin
     [JsonProperty("merged_bits")]
