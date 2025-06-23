@@ -494,10 +494,11 @@ public class BitcoinJob
             {
                 var separator = new byte[] { 0x01 };
                 var mweb = BlockTemplate.Extra.SafeExtensionDataAs<MwebBlockTemplateExtra>();
-                var mwebRaw = mweb.Mweb.HexToByteArray();
-
-                bs.ReadWrite(separator);
-                bs.ReadWrite(mwebRaw);
+                if (mweb != null && mweb.Mweb != null) {
+                    var mwebRaw = mweb.Mweb.HexToByteArray();
+                    bs.ReadWrite(separator);
+                    bs.ReadWrite(mwebRaw);
+                }
             }
 
             return stream.ToArray();
