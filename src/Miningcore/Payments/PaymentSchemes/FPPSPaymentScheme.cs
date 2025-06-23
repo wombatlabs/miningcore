@@ -86,10 +86,10 @@ namespace Miningcore.Payments.PaymentSchemes
             {
                 logger.Info(() =>
                     $"Crediting {miner} with {payoutHandler.FormatAmount(amount)} " +
-                    $"for {FormatUtil.FormatQuantity(shares[miner])} shares");
+                    $"for {FormatUtil.FormatQuantity((double)shares[miner])} shares");
                 await balanceRepo.AddAmountAsync(
                     con, tx, poolConfig.Id, miner, amount,
-                    $"Reward for {FormatUtil.FormatQuantity(shares[miner])} shares for block {block.BlockHeight}");
+                    $"Reward for {FormatUtil.FormatQuantity((double)shares[miner])} shares for block {block.BlockHeight}");
             }
 
             if(before > block.Created)
