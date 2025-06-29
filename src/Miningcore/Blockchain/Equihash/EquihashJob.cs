@@ -158,7 +158,23 @@ public class EquihashJob
 
     protected virtual void BuildCoinbase()
     {
-        var script = TxIn.CreateCoinbase((int) BlockTemplate.Height).ScriptSig;
+        //var script = TxIn.CreateCoinbase((int) BlockTemplate.Height).ScriptSig;
+
+        int height = (int)BlockTemplate.Height;
+        // NU5 first, fallback to pre-6.2.0 field
+        var commitHex = BlockTemplate.DefaultRoots?.BlockCommitmentHash
+                        ?? BlockTemplate.BlockCommitmentRootHash;
+
+        if(string.IsNullOrEmpty(commitHex))
+            throw new Exception("No Sprout commitment root in block template");
+
+        var commitBytes = commitHex.HexToReverseByteArray();
+
+        var heightBytes = BitConverter.GetBytes(height);      // already little-endian
+        var heightOp    = Op.GetPushOp(heightBytes);
+        var commitOp    = Op.GetPushOp(commitBytes);
+
+        var scriptSig = new Script(heightOp, commitOp);
 
         // output transaction
         txOut = CreateOutputTransaction();
@@ -191,7 +207,7 @@ public class EquihashJob
             bs.ReadWriteAsVarInt(ref txInputCount);
             bs.ReadWrite(sha256Empty);
             bs.ReadWrite(ref coinbaseIndex);
-            bs.ReadWrite(ref script);
+            bs.ReadWrite(ref scriptSig);
             bs.ReadWrite(ref coinbaseSequence);
 
             // serialize output transaction

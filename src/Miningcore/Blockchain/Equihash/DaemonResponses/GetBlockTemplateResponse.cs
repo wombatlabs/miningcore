@@ -1,7 +1,22 @@
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Miningcore.Blockchain.Equihash.DaemonResponses;
+
+// for the new “defaultroots” RPC object
+public class DefaultRoots
+{
+    [JsonProperty("merkleroot")]
+    public string MerkleRoot { get; set; }
+
+    [JsonProperty("chainhistoryroot")]
+    public string ChainHistoryRoot { get; set; }
+
+    [JsonProperty("authdataroot")]
+    public string AuthDataRoot { get; set; }
+
+    [JsonProperty("blockcommitmentshash")]
+    public string BlockCommitmentHash { get; set; }
+}
 
 public class EquihashCoinbaseTransaction
 {
@@ -30,23 +45,20 @@ public class EquihashBlockTemplate : Bitcoin.DaemonResponses.BlockTemplate
 
     public ZCashBlockSubsidy Subsidy { get; set; }
 
-    //[JsonProperty("finalsaplingroothash")]
-    //public string FinalSaplingRootHash { get; set; }
+    [JsonProperty("blockcommitmentshash")]
+    public string BlockCommitmentRootHash { get; set; }
 
-    [JsonProperty("finalsaplingroot")]
+    [JsonProperty("lightclientroothash")]
+    public string LightClientRootHash { get; set; }
+
+    [JsonProperty("finalsaplingroothash")]
     public string FinalSaplingRootHash { get; set; }
 
-    // Orchard anchor (NU5)
-    [JsonProperty("finalorchardroot")]
-    public string FinalOrchardRootHash { get; set; }
+    [JsonProperty("sproutroothash")]
+    public string SproutRootHash { get; set; }
 
-    // Holds both authdataroot and blockcommitmentshash
     [JsonProperty("defaultroots")]
-    public JObject DefaultRoots { get; set; }
-
-    // Filled at runtime from DefaultRoots["authdataroot"] or ["blockcommitmentshash"]
-    [JsonIgnore]
-    public string BlockCommitmentsHash { get; set; }
+    public DefaultRoots DefaultRoots { get; set; }
     
     // Veruscoin
     [JsonProperty("merged_bits")]
