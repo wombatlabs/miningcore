@@ -54,9 +54,6 @@ public class EquihashBlockTemplate : Bitcoin.DaemonResponses.BlockTemplate
     [JsonProperty("finalsaplingroothash")]
     public string FinalSaplingRootHash { get; set; }
 
-    [JsonProperty("sproutroothash")]
-    public string SproutRootHash { get; set; }
-
     [JsonProperty("defaultroots")]
     public DefaultRoots DefaultRoots { get; set; }
     
