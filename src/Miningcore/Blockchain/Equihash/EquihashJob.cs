@@ -160,6 +160,16 @@ public class EquihashJob
     {
         //var script = TxIn.CreateCoinbase((int) BlockTemplate.Height).ScriptSig;
 
+        var cbHex = BlockTemplate.CoinbaseTx?.Data;
+        if(!string.IsNullOrEmpty(cbHex))
+        {
+            // decode and hash exactly what zcashd built
+            coinbaseInitial     = cbHex.HexToByteArray();
+            coinbaseInitialHash = new byte[32];
+            sha256D.Digest(coinbaseInitial, coinbaseInitialHash);
+            return;
+        }
+
         int height = (int)BlockTemplate.Height;
         // NU5 first, fallback to pre-6.2.0 field
         var commitHex = BlockTemplate.DefaultRoots?.BlockCommitmentHash
