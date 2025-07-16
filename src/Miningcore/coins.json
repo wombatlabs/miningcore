@@ -4873,7 +4873,7 @@
                 },
                 "coinbaseTxNetwork": "zcash-test",
                 "payFoundersReward": true,
-                "payFundingStream": true,
+                "payFundingStream": false,
                 "percentFoundersReward": 20,
                 "foundersRewardAddresses": [
                     "t2UNzUUx8mWBCRYPRezvA363EYXyEpHokyi",
