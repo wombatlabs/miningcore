@@ -140,7 +140,7 @@ Running and developing Miningcore on Windows is of course supported.
 
 ### Database setup
 
-Miningcore currently requires PostgreSQL 10 or higher.
+Miningcore currently requires PostgreSQL 10 or higher. PostgreSQL 15.x recommended.  
 
 Run Postgres's `psql` tool:
 
