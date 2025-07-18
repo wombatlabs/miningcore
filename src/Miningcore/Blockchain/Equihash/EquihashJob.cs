@@ -532,9 +532,12 @@ public class EquihashJob
 
         if(networkParams?.PayFundingStream == true)
         {
-            decimal fundingstreamTotal = 0;
-            fundingstreamTotal = blockTemplate.Subsidy.FundingStreams.Sum(x => x.Value);
-            blockReward = (blockTemplate.Subsidy.Miner + fundingstreamTotal) * BitcoinConstants.SatoshisPerBitcoin;
+            // if no funding streams (e.g. on an empty testnet), treat as zero
+            var fundingstreamTotal = blockTemplate.Subsidy.FundingStreams
+                                        ?.Sum(x => x.Value)
+                                        ?? 0m;
+            blockReward = (blockTemplate.Subsidy.Miner + fundingstreamTotal)
+                            * BitcoinConstants.SatoshisPerBitcoin;
         }
         else if(networkParams?.vOuts == true)
         {
@@ -550,13 +553,19 @@ public class EquihashJob
             blockReward = (blockTemplate.Subsidy.Miner + founders.Value) * BitcoinConstants.SatoshisPerBitcoin;
         }
 
-        rewardFees = blockTemplate.Transactions.Sum(x => x.Fee);
+        // if mempool empty, treat fees = 0
+        rewardFees = blockTemplate.Transactions
+                        ?.Sum(x => x.Fee)
+                        ?? 0m;
 
         BuildCoinbase();
 
         // build tx hashes
         var txHashes = new List<uint256> { new(coinbaseInitialHash) };
-        txHashes.AddRange(BlockTemplate.Transactions.Select(tx => new uint256(tx.Hash.HexToReverseByteArray())));
+        // skip null Transactions array
+        txHashes.AddRange(BlockTemplate.Transactions
+            ?.Select(tx => new uint256(tx.Hash.HexToReverseByteArray()))
+            ?? Enumerable.Empty<uint256>());
 
         // build merkle root
         merkleRoot = MerkleNode.GetRoot(txHashes).Hash.ToBytes().ReverseInPlace();
