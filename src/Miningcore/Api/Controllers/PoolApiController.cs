@@ -150,53 +150,6 @@ public class PoolApiController : ApiControllerBase
         };
     }
 
-    [HttpGet("/api/transparency")]
-    public async Task<GetTransparencyResponse> GetTransparencyAsync(CancellationToken ct)
-    {
-        var poolsData = await Task.WhenAll(clusterConfig.Pools
-            .Where(x => x.Enabled)
-            .Select(async config =>
-            {
-                var stats = await cf.Run(con => statsRepo.GetLastPoolStatsAsync(con, config.Id, ct));
-
-                pools.TryGetValue(config.Id, out var poolInstance);
-
-                var poolInfo = config.ToPoolInfo(mapper, stats, poolInstance);
-
-                var poolHashrate = poolInstance?.PoolStats?.PoolHashrate ??
-                    stats?.PoolHashrate ?? 0d;
-
-                var poolMiners = poolInstance?.PoolStats?.ConnectedMiners ??
-                    stats?.ConnectedMiners ?? 0;
-
-                var networkStats = poolInstance?.NetworkStats ?? poolInfo.NetworkStats;
-                var networkHashrate = networkStats?.NetworkHashrate ??
-                    stats?.NetworkHashrate ?? 0d;
-
-                var blockHeight = networkStats?.BlockHeight ??
-                    (stats != null ? (ulong) Math.Max(0, stats.BlockHeight) : 0UL);
-
-                return new TransparencyInfo
-                {
-                    Id = poolInfo.Id,
-                    Coin = poolInfo.Coin?.Type ?? config.Template?.Symbol ?? config.Coin,
-                    Algorithm = poolInfo.Coin?.Algorithm ?? config.Template?.GetAlgorithmName(),
-                    Name = poolInfo.Coin?.Name ?? config.Template?.Name,
-                    FeeType = config.PaymentProcessing?.PayoutScheme.ToString(),
-                    Hashrate = ToUInt64(poolHashrate),
-                    NetworkHashrate = ToUInt64(networkHashrate),
-                    Miners = ToUInt32(poolMiners),
-                    Fee = poolInfo.PoolFeePercent,
-                    BlockHeight = blockHeight
-                };
-            }).ToArray());
-
-        return new GetTransparencyResponse
-        {
-            Pools = poolsData
-        };
-    }
-
     [HttpGet("/api/help")]
     public ActionResult GetHelp()
     {
