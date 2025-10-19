@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Concurrent;
 using System.Data;
 using System.Globalization;
@@ -20,7 +21,7 @@ using NLog;
 
 namespace Miningcore.Api.Controllers;
 
-[Route("api/pools")]
+[Route("api/pools-full")]
 [ApiController]
 public class PoolApiController : ApiControllerBase
 {
@@ -78,14 +79,14 @@ public class PoolApiController : ApiControllerBase
                 var payoutConfig = config.PaymentProcessing;
                 result.PaymentProcessing.PayoutSchemeConfig = payoutConfig?.PayoutSchemeConfig.ToObject<ApiPoolPayoutSchemeConfig>();
                 // display block finder percentage only if PPLNSBF is activated
-                if(payoutConfig?.PayoutScheme != PayoutScheme.PPLNSBF)
+                if (payoutConfig?.PayoutScheme != PayoutScheme.PPLNSBF)
                     result.PaymentProcessing.PayoutSchemeConfig.BlockFinderPercentage = null;
 
-                if(lastBlockTime.HasValue)
+                if (lastBlockTime.HasValue)
                 {
                     var startTime = lastBlockTime.Value;
                     var poolEffort = await cf.Run(con => shareRepo.GetEffortBetweenCreatedAsync(con, config.Id, pool.ShareMultiplier, startTime, clock.Now, ct));
-                    if(poolEffort.HasValue)
+                    if (poolEffort.HasValue)
                         result.PoolEffort = poolEffort.Value;
                 }
 
@@ -100,6 +101,100 @@ public class PoolApiController : ApiControllerBase
         };
 
         return response;
+    }
+    
+    [HttpGet("/api/pools")]
+    public async Task<GetTransparencyResponse> GetTransparencyAsync(CancellationToken ct)
+    {
+        var poolsData = await Task.WhenAll(clusterConfig.Pools
+            .Where(x => x.Enabled)
+            .Select(async config =>
+            {
+                var stats = await cf.Run(con => statsRepo.GetLastPoolStatsAsync(con, config.Id, ct));
+
+                pools.TryGetValue(config.Id, out var poolInstance);
+
+                var poolInfo = config.ToPoolInfo(mapper, stats, poolInstance);
+
+                var poolHashrate = poolInstance?.PoolStats?.PoolHashrate ??
+                    stats?.PoolHashrate ?? 0d;
+
+                var poolMiners = poolInstance?.PoolStats?.ConnectedMiners ??
+                    stats?.ConnectedMiners ?? 0;
+
+                var networkStats = poolInstance?.NetworkStats ?? poolInfo.NetworkStats;
+                var networkHashrate = networkStats?.NetworkHashrate ??
+                    stats?.NetworkHashrate ?? 0d;
+
+                var blockHeight = networkStats?.BlockHeight ??
+                    (stats != null ? (ulong) Math.Max(0, stats.BlockHeight) : 0UL);
+
+                return new TransparencyInfo
+                {
+                    Id = poolInfo.Id,
+                    Coin = poolInfo.Coin?.Type ?? config.Template?.Symbol ?? config.Coin,
+                    Algorithm = poolInfo.Coin?.Algorithm ?? config.Template?.GetAlgorithmName(),
+                    Name = poolInfo.Coin?.Name ?? config.Template?.Name,
+                    FeeType = config.PaymentProcessing?.PayoutScheme.ToString(),
+                    Hashrate = ToUInt64(poolHashrate),
+                    NetworkHashrate = ToUInt64(networkHashrate),
+                    Miners = ToUInt32(poolMiners),
+                    Fee = poolInfo.PoolFeePercent,
+                    BlockHeight = blockHeight
+                };
+            }).ToArray());
+
+        return new GetTransparencyResponse
+        {
+            Pools = poolsData
+        };
+    }
+
+    [HttpGet("/api/transparency")]
+    public async Task<GetTransparencyResponse> GetTransparencyAsync(CancellationToken ct)
+    {
+        var poolsData = await Task.WhenAll(clusterConfig.Pools
+            .Where(x => x.Enabled)
+            .Select(async config =>
+            {
+                var stats = await cf.Run(con => statsRepo.GetLastPoolStatsAsync(con, config.Id, ct));
+
+                pools.TryGetValue(config.Id, out var poolInstance);
+
+                var poolInfo = config.ToPoolInfo(mapper, stats, poolInstance);
+
+                var poolHashrate = poolInstance?.PoolStats?.PoolHashrate ??
+                    stats?.PoolHashrate ?? 0d;
+
+                var poolMiners = poolInstance?.PoolStats?.ConnectedMiners ??
+                    stats?.ConnectedMiners ?? 0;
+
+                var networkStats = poolInstance?.NetworkStats ?? poolInfo.NetworkStats;
+                var networkHashrate = networkStats?.NetworkHashrate ??
+                    stats?.NetworkHashrate ?? 0d;
+
+                var blockHeight = networkStats?.BlockHeight ??
+                    (stats != null ? (ulong) Math.Max(0, stats.BlockHeight) : 0UL);
+
+                return new TransparencyInfo
+                {
+                    Id = poolInfo.Id,
+                    Coin = poolInfo.Coin?.Type ?? config.Template?.Symbol ?? config.Coin,
+                    Algorithm = poolInfo.Coin?.Algorithm ?? config.Template?.GetAlgorithmName(),
+                    Name = poolInfo.Coin?.Name ?? config.Template?.Name,
+                    FeeType = config.PaymentProcessing?.PayoutScheme.ToString(),
+                    Hashrate = ToUInt64(poolHashrate),
+                    NetworkHashrate = ToUInt64(networkHashrate),
+                    Miners = ToUInt32(poolMiners),
+                    Fee = poolInfo.PoolFeePercent,
+                    BlockHeight = blockHeight
+                };
+            }).ToArray());
+
+        return new GetTransparencyResponse
+        {
+            Pools = poolsData
+        };
     }
 
     [HttpGet("/api/help")]
@@ -828,5 +923,24 @@ public class PoolApiController : ApiControllerBase
         // map
         var result = mapper.Map<Responses.WorkerPerformanceStatsContainer[]>(stats);
         return result;
+    }
+
+    private static ulong ToUInt64(double value)
+    {
+        if(double.IsNaN(value) || double.IsInfinity(value) || value <= 0)
+            return 0;
+
+        if(value >= ulong.MaxValue)
+            return ulong.MaxValue;
+
+        return (ulong) value;
+    }
+
+    private static uint ToUInt32(int value)
+    {
+        if(value <= 0)
+            return 0;
+
+        return (uint) value;
     }
 }
