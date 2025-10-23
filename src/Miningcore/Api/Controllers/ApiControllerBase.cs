@@ -1,9 +1,12 @@
+using System.Collections.Generic;
 using System.Net;
+using System.Linq;
 using Autofac;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
 using Miningcore.Configuration;
 using Miningcore.Persistence;
+using Miningcore.Util;
 
 namespace Miningcore.Api.Controllers;
 
@@ -19,6 +22,41 @@ public abstract class ApiControllerBase : ControllerBase
     protected readonly ClusterConfig clusterConfig;
     protected readonly IConnectionFactory cf;
     protected readonly IMapper mapper;
+
+    protected void EnsureAdminAccess()
+    {
+        var remoteAddress = HttpContext?.Connection?.RemoteIpAddress;
+
+        if(remoteAddress == null)
+            throw new ApiException("Forbidden", HttpStatusCode.Forbidden);
+
+        if(remoteAddress.IsIPv4MappedToIPv6)
+            remoteAddress = remoteAddress.MapToIPv4();
+
+        var whitelist = clusterConfig.Api?.AdminIpWhitelist != null ?
+            new List<IPAddress>(clusterConfig.Api.AdminIpWhitelist.Select(IPAddress.Parse)) :
+            new List<IPAddress>();
+
+        if(whitelist.Count == 0)
+        {
+            whitelist.Add(IPAddress.Loopback);
+            whitelist.Add(IPAddress.IPv6Loopback);
+            whitelist.Add(IPUtils.IPv4LoopBackOnIPv6);
+        }
+
+        var normalizedWhitelist = new HashSet<IPAddress>();
+
+        foreach(var address in whitelist)
+        {
+            normalizedWhitelist.Add(address);
+
+            if(address.IsIPv4MappedToIPv6)
+                normalizedWhitelist.Add(address.MapToIPv4());
+        }
+
+        if(!normalizedWhitelist.Contains(remoteAddress))
+            throw new ApiException("Forbidden", HttpStatusCode.Forbidden);
+    }
 
     protected PoolConfig GetPoolNoThrow(string poolId)
     {

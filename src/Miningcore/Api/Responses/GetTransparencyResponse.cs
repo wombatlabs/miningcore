@@ -10,6 +10,7 @@ public class TransparencyInfo
     public ulong Hashrate { get; set; }
     public ulong NetworkHashrate { get; set; }
     public uint Miners { get; set; }
+    public uint Workers { get; set; }
     public float Fee { get; set; }
     public ulong BlockHeight { get; set; }
 }

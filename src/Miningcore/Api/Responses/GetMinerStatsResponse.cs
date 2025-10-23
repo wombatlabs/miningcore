@@ -5,6 +5,7 @@ public class MinerPerformanceStats
     public string Miner { get; set; }
     public double Hashrate { get; set; }
     public double SharesPerSecond { get; set; }
+    public int WorkerCount { get; set; }
 }
 
 public class WorkerPerformanceStats

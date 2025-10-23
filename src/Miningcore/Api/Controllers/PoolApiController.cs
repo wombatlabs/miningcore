@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Data;
 using System.Globalization;
+using System.Linq;
 using System.Net;
 using Autofac;
 using Microsoft.AspNetCore.Mvc;
@@ -53,6 +54,8 @@ public class PoolApiController : ApiControllerBase
     [HttpGet]
     public async Task<GetPoolsResponse> Get(CancellationToken ct, [FromQuery] uint topMinersRange = 24)
     {
+        EnsureAdminAccess();
+
         var response = new GetPoolsResponse
         {
             Pools = await Task.WhenAll(clusterConfig.Pools.Where(x => x.Enabled).Select(async config =>
@@ -96,6 +99,17 @@ public class PoolApiController : ApiControllerBase
 
                 result.TopMiners = minersByHashrate.Select(mapper.Map<MinerPerformanceStats>).ToArray();
 
+                var workerHashrates = await cf.Run(con => statsRepo.GetPoolMinerWorkerHashratesAsync(con, config.Id, ct));
+                var workerCounts = workerHashrates
+                    .GroupBy(x => x.Miner)
+                    .ToDictionary(g => g.Key, g => g.Select(entry => entry.Worker ?? string.Empty).Distinct().Count());
+
+                foreach(var miner in result.TopMiners)
+                {
+                    if(workerCounts.TryGetValue(miner.Miner, out var count))
+                        miner.WorkerCount = count;
+                }
+
                 return result;
             }).ToArray())
         };
@@ -122,6 +136,9 @@ public class PoolApiController : ApiControllerBase
                 var poolMiners = poolInstance?.PoolStats?.ConnectedMiners ??
                     stats?.ConnectedMiners ?? 0;
 
+                var workerHashrates = await cf.Run(con => statsRepo.GetPoolMinerWorkerHashratesAsync(con, config.Id, ct));
+                var totalWorkers = (uint) workerHashrates.Length;
+
                 var networkStats = poolInstance?.NetworkStats ?? poolInfo.NetworkStats;
                 var networkHashrate = networkStats?.NetworkHashrate ??
                     stats?.NetworkHashrate ?? 0d;
@@ -139,6 +156,7 @@ public class PoolApiController : ApiControllerBase
                     Hashrate = ToUInt64(poolHashrate),
                     NetworkHashrate = ToUInt64(networkHashrate),
                     Miners = ToUInt32(poolMiners),
+                    Workers = totalWorkers,
                     Fee = poolInfo.PoolFeePercent,
                     BlockHeight = blockHeight
                 };
@@ -179,6 +197,8 @@ public class PoolApiController : ApiControllerBase
     [HttpGet("{poolId}")]
     public async Task<GetPoolResponse> GetPoolInfoAsync(string poolId, CancellationToken ct, [FromQuery] uint topMinersRange = 24)
     {
+        EnsureAdminAccess();
+
         var pool = GetPool(poolId);
 
         // load stats
@@ -221,6 +241,17 @@ public class PoolApiController : ApiControllerBase
         response.Pool.TopMiners = (await cf.Run(con => statsRepo.PagePoolMinersByHashrateAsync(con, pool.Id, from, 0, 15, ct)))
             .Select(mapper.Map<MinerPerformanceStats>)
             .ToArray();
+
+        var workerHashrates = await cf.Run(con => statsRepo.GetPoolMinerWorkerHashratesAsync(con, pool.Id, ct));
+        var workerCounts = workerHashrates
+            .GroupBy(x => x.Miner)
+            .ToDictionary(g => g.Key, g => g.Select(entry => entry.Worker ?? string.Empty).Distinct().Count());
+
+        foreach(var miner in response.Pool.TopMiners)
+        {
+            if(workerCounts.TryGetValue(miner.Miner, out var count))
+                miner.WorkerCount = count;
+        }
 
         return response;
     }
@@ -276,6 +307,19 @@ public class PoolApiController : ApiControllerBase
             .Select(mapper.Map<MinerPerformanceStats>)
             .ToArray();
 
+        var workerHashrates = await cf.Run(con => statsRepo.GetPoolMinerWorkerHashratesAsync(con, pool.Id, ct));
+        var workerCounts = workerHashrates
+            .GroupBy(x => x.Miner)
+            .ToDictionary(g => g.Key, g => g.Select(entry => entry.Worker ?? string.Empty).Distinct().Count());
+
+        foreach(var miner in miners)
+        {
+            if(workerCounts.TryGetValue(miner.Miner, out var count))
+                miner.WorkerCount = count;
+
+            miner.Miner = AbbreviateMinerLabel(miner.Miner);
+        }
+
         return miners;
     }
 
@@ -299,6 +343,8 @@ public class PoolApiController : ApiControllerBase
 
         foreach(var block in blocks)
         {
+            block.Miner = AbbreviateMinerLabel(block.Miner);
+
             // compute infoLink
             if(blockInfobaseDict != null)
             {
@@ -340,6 +386,8 @@ public class PoolApiController : ApiControllerBase
 
         foreach(var block in blocks)
         {
+            block.Miner = AbbreviateMinerLabel(block.Miner);
+
             // compute infoLink
             if(blockInfobaseDict != null)
             {
@@ -384,6 +432,8 @@ public class PoolApiController : ApiControllerBase
             // pool wallet link
             if(!string.IsNullOrEmpty(addressInfobaseUrl))
                 payment.AddressInfoLink = string.Format(addressInfobaseUrl, payment.Address);
+
+            payment.Address = AbbreviateWallet(payment.Address);
         }
 
         return payments;
@@ -417,6 +467,8 @@ public class PoolApiController : ApiControllerBase
             // pool wallet link
             if(!string.IsNullOrEmpty(addressInfobaseUrl))
                 payment.AddressInfoLink = string.Format(addressInfobaseUrl, payment.Address);
+
+            payment.Address = AbbreviateWallet(payment.Address);
         }
 
         var response = new PagedResultResponse<Responses.Payment[]>(payments, itemCount, pageCount);
@@ -508,6 +560,8 @@ public class PoolApiController : ApiControllerBase
 
         foreach(var block in blocks)
         {
+            block.Miner = AbbreviateMinerLabel(block.Miner);
+
             // compute infoLink
             if(blockInfobaseDict != null)
             {
@@ -555,6 +609,8 @@ public class PoolApiController : ApiControllerBase
 
         foreach(var block in blocks)
         {
+            block.Miner = AbbreviateMinerLabel(block.Miner);
+
             // compute infoLink
             if(blockInfobaseDict != null)
             {
@@ -605,6 +661,8 @@ public class PoolApiController : ApiControllerBase
             // pool wallet link
             if(!string.IsNullOrEmpty(addressInfobaseUrl))
                 payment.AddressInfoLink = string.Format(addressInfobaseUrl, payment.Address);
+
+            payment.Address = AbbreviateWallet(payment.Address);
         }
 
         return payments;
@@ -644,6 +702,8 @@ public class PoolApiController : ApiControllerBase
             // pool wallet link
             if(!string.IsNullOrEmpty(addressInfobaseUrl))
                 payment.AddressInfoLink = string.Format(addressInfobaseUrl, payment.Address);
+
+            payment.Address = AbbreviateWallet(payment.Address);
         }
 
         var response = new PagedResultResponse<Responses.Payment[]>(payments, itemCount, pageCount);
@@ -668,6 +728,9 @@ public class PoolApiController : ApiControllerBase
             .Select(mapper.Map<Responses.BalanceChange>)
             .ToArray();
 
+        foreach(var change in balanceChanges)
+            change.Address = AbbreviateWallet(change.Address);
+
         return balanceChanges;
     }
 
@@ -691,6 +754,9 @@ public class PoolApiController : ApiControllerBase
                 con, pool.Id, address, page, pageSize, ct)))
             .Select(mapper.Map<Responses.BalanceChange>)
             .ToArray();
+
+        foreach(var change in balanceChanges)
+            change.Address = AbbreviateWallet(change.Address);
 
         var response = new PagedResultResponse<Responses.BalanceChange[]>(balanceChanges, itemCount, pageCount);
         return response;
@@ -876,6 +942,38 @@ public class PoolApiController : ApiControllerBase
         // map
         var result = mapper.Map<Responses.WorkerPerformanceStatsContainer[]>(stats);
         return result;
+    }
+
+    private static string AbbreviateMinerLabel(string value)
+    {
+        if(string.IsNullOrEmpty(value))
+            return value;
+
+        var separatorIndex = value.IndexOf('.');
+
+        if(separatorIndex > 0)
+        {
+            var wallet = value.Substring(0, separatorIndex);
+            var worker = value.Substring(separatorIndex);
+            return $"{AbbreviateWallet(wallet)}{worker}";
+        }
+
+        return AbbreviateWallet(value);
+    }
+
+    private static string AbbreviateWallet(string value)
+    {
+        if(string.IsNullOrWhiteSpace(value))
+            return value;
+
+        const int prefixLength = 6;
+        const int suffixLength = 6;
+        var trimmed = value.Trim();
+
+        if(trimmed.Length <= prefixLength + suffixLength + 3)
+            return trimmed;
+
+        return $"{trimmed.Substring(0, prefixLength)}...{trimmed.Substring(trimmed.Length - suffixLength)}";
     }
 
     private static ulong ToUInt64(double value)
