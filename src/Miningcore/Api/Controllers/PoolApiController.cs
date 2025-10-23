@@ -108,6 +108,8 @@ public class PoolApiController : ApiControllerBase
                 {
                     if(workerCounts.TryGetValue(miner.Miner, out var count))
                         miner.WorkerCount = count;
+
+                    miner.Miner = AbbreviateMinerLabel(miner.Miner);
                 }
 
                 return result;
@@ -251,6 +253,8 @@ public class PoolApiController : ApiControllerBase
         {
             if(workerCounts.TryGetValue(miner.Miner, out var count))
                 miner.WorkerCount = count;
+
+            miner.Miner = AbbreviateMinerLabel(miner.Miner);
         }
 
         return response;
