@@ -112,6 +112,10 @@ public class PoolApiController : ApiControllerBase
                     miner.Miner = AbbreviateMinerLabel(miner.Miner);
                 }
 
+                result.Ports = null;
+                result.Address = null;
+                result.AddressInfoLink = null;
+
                 return result;
             }).ToArray())
         };
@@ -201,18 +205,22 @@ public class PoolApiController : ApiControllerBase
     {
         EnsureAdminAccess();
 
-        var pool = GetPool(poolId);
+                var pool = GetPool(poolId);
 
-        // load stats
-        var stats = await cf.Run(con => statsRepo.GetLastPoolStatsAsync(con, pool.Id, ct));
+                // load stats
+                var stats = await cf.Run(con => statsRepo.GetLastPoolStatsAsync(con, pool.Id, ct));
 
-        // get pool
-        pools.TryGetValue(pool.Id, out var poolInstance);
+                // get pool
+                pools.TryGetValue(pool.Id, out var poolInstance);
 
-        var response = new GetPoolResponse
-        {
-            Pool = pool.ToPoolInfo(mapper, stats, poolInstance)
-        };
+                var response = new GetPoolResponse
+                {
+                    Pool = pool.ToPoolInfo(mapper, stats, poolInstance)
+                };
+
+                response.Pool.Ports = null;
+                response.Pool.Address = null;
+                response.Pool.AddressInfoLink = null;
 
         // enrich
         response.Pool.TotalPaid = await cf.Run(con => statsRepo.GetTotalPoolPaymentsAsync(con, pool.Id, ct));

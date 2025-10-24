@@ -66,14 +66,14 @@ public partial class PoolInfo
     public string Id { get; set; }
 
     public ApiCoinConfig Coin { get; set; }
-    //public Dictionary<int, PoolEndpoint> Ports { get; set; }
+    public Dictionary<int, PoolEndpoint> Ports { get; set; }
     public ApiPoolPaymentProcessingConfig PaymentProcessing { get; set; }
     public PoolShareBasedBanningConfig ShareBasedBanning { get; set; }
     public int ClientConnectionTimeout { get; set; }
     public int JobRebroadcastTimeout { get; set; }
     public int BlockRefreshInterval { get; set; }
     public float PoolFeePercent { get; set; }
-    //public string Address { get; set; }
+    public string Address { get; set; }
     public string AddressInfoLink { get; set; }
 
     // Stats
