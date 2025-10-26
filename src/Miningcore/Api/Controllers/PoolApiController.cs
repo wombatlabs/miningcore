@@ -149,6 +149,9 @@ public class PoolApiController : ApiControllerBase
                 var networkHashrate = networkStats?.NetworkHashrate ??
                     stats?.NetworkHashrate ?? 0d;
 
+                var networkDifficulty = networkStats?.NetworkDifficulty ??
+                    stats?.NetworkDifficulty ?? 0d;
+
                 var blockHeight = networkStats?.BlockHeight ??
                     (stats != null ? (ulong) Math.Max(0, stats.BlockHeight) : 0UL);
 
@@ -161,6 +164,7 @@ public class PoolApiController : ApiControllerBase
                     FeeType = config.PaymentProcessing?.PayoutScheme.ToString(),
                     Hashrate = ToUInt64(poolHashrate),
                     NetworkHashrate = ToUInt64(networkHashrate),
+                    NetworkDifficulty = networkDifficulty,
                     Miners = ToUInt32(poolMiners),
                     Workers = totalWorkers,
                     Fee = poolInfo.PoolFeePercent,

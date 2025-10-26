@@ -9,6 +9,7 @@ public class TransparencyInfo
     public string FeeType { get; set; }
     public ulong Hashrate { get; set; }
     public ulong NetworkHashrate { get; set; }
+    public double NetworkDifficulty { get; set; }
     public uint Miners { get; set; }
     public uint Workers { get; set; }
     public float Fee { get; set; }
