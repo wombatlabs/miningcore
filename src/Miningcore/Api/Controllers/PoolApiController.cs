@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Data;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Net;
@@ -48,6 +49,7 @@ public class PoolApiController : ApiControllerBase
     private readonly ConcurrentDictionary<string, IMiningPool> pools;
 
     private static readonly ILogger logger = LogManager.GetCurrentClassLogger();
+    private static readonly TimeSpan WorkerActiveGracePeriod = TimeSpan.FromMinutes(15);
 
     #region Actions
 
@@ -545,6 +547,29 @@ public class PoolApiController : ApiControllerBase
             var totalPendingBlocks = await cf.Run(con => statsRepo.GetMinerTotalPendingBlocksAsync(con, pool.Id, address, ct));
             stats.TotalConfirmedBlocks = totalConfirmedBlocks;
             stats.TotalPendingBlocks = totalPendingBlocks;
+
+            var workerActivity = await cf.Run(con => shareRepo.GetMinerWorkerActivityAsync(con, pool.Id, address, ct));
+            var now = clock.Now;
+
+            if(workerActivity?.Length > 0 && stats.Performance?.Workers != null && stats.Performance.Workers.Count > 0)
+            {
+                var activityByWorker = workerActivity
+                    .GroupBy(x => x.Worker ?? string.Empty)
+                    .ToDictionary(x => x.Key, x => x.First());
+
+                foreach(var worker in stats.Performance.Workers)
+                {
+                    var key = worker.Key ?? string.Empty;
+
+                    if(activityByWorker.TryGetValue(key, out var activity))
+                    {
+                        var uptimeSpan = CalculateWorkerUptimeSpan(activity, now);
+                        worker.Value.Uptime = CreateUptimeInfo(uptimeSpan);
+                    }
+                }
+            }
+
+            stats.ServerUptime = CreateUptimeInfo(GetServerUptimeSpan(now));
         }
 
         return stats;
@@ -990,6 +1015,43 @@ public class PoolApiController : ApiControllerBase
             return trimmed;
 
         return $"{trimmed.Substring(0, prefixLength)}...{trimmed.Substring(trimmed.Length - suffixLength)}";
+    }
+
+    private static UptimeInfo CreateUptimeInfo(TimeSpan span)
+    {
+        if(span < TimeSpan.Zero)
+            span = TimeSpan.Zero;
+
+        span = TimeSpan.FromSeconds(Math.Floor(span.TotalSeconds));
+
+        return new UptimeInfo
+        {
+            Days = span.Days,
+            Hours = span.Hours,
+            Minutes = span.Minutes
+        };
+    }
+
+    private static TimeSpan CalculateWorkerUptimeSpan(MinerWorkerActivity activity, DateTime now)
+    {
+        if(activity == null || activity.FirstShare == default)
+            return TimeSpan.Zero;
+
+        var effectiveEnd = activity.LastShare != default ? activity.LastShare : now;
+
+        if(activity.LastShare != default && now - activity.LastShare <= WorkerActiveGracePeriod)
+            effectiveEnd = now;
+
+        if(effectiveEnd < activity.FirstShare)
+            return TimeSpan.Zero;
+
+        return effectiveEnd - activity.FirstShare;
+    }
+
+    private static TimeSpan GetServerUptimeSpan(DateTime now)
+    {
+        var startTimeUtc = Process.GetCurrentProcess().StartTime.ToUniversalTime();
+        return now - startTimeUtc;
     }
 
     private static ulong ToUInt64(double value)

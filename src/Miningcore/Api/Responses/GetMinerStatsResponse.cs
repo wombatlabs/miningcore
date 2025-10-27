@@ -12,6 +12,7 @@ public class WorkerPerformanceStats
 {
     public double Hashrate { get; set; }
     public double SharesPerSecond { get; set; }
+    public UptimeInfo Uptime { get; set; }
 }
 
 public class WorkerPerformanceStatsContainer
@@ -33,4 +34,12 @@ public class MinerStats
     public WorkerPerformanceStatsContainer[] PerformanceSamples { get; set; }
     public long TotalConfirmedBlocks { get; set; }
     public long TotalPendingBlocks { get; set; }
+    public UptimeInfo ServerUptime { get; set; }
+}
+
+public class UptimeInfo
+{
+    public int Days { get; set; }
+    public int Hours { get; set; }
+    public int Minutes { get; set; }
 }

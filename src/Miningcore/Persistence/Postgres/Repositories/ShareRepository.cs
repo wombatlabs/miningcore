@@ -149,6 +149,17 @@ public class ShareRepository : IShareRepository
             .ToArray();
     }
 
+    public async Task<MinerWorkerActivity[]> GetMinerWorkerActivityAsync(IDbConnection con, string poolId, string miner, CancellationToken ct)
+    {
+        const string query = @"SELECT miner, worker, MIN(created) AS firstshare, MAX(created) AS lastshare
+            FROM shares
+            WHERE poolid = @poolId AND miner = @miner
+            GROUP BY miner, worker";
+
+        return (await con.QueryAsync<MinerWorkerActivity>(new CommandDefinition(query, new { poolId, miner }, cancellationToken: ct)))
+            .ToArray();
+    }
+
     public async Task<string[]> GetRecentyUsedIpAddressesAsync(IDbConnection con, IDbTransaction tx, string poolId, string miner, CancellationToken ct)
     {
         const string query = @"SELECT DISTINCT s.ipaddress FROM (SELECT * FROM shares

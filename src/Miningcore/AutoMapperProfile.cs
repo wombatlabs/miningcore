@@ -66,9 +66,11 @@ public class AutoMapperProfile : Profile
             .ForMember(dest => dest.LastPayment, opt => opt.Ignore())
             .ForMember(dest => dest.LastPaymentLink, opt => opt.Ignore())
             .ForMember(dest => dest.TotalConfirmedBlocks, opt => opt.MapFrom(src => src.TotalConfirmedBlocks))
-            .ForMember(dest => dest.TotalPendingBlocks, opt => opt.MapFrom(src => src.TotalPendingBlocks));
+            .ForMember(dest => dest.TotalPendingBlocks, opt => opt.MapFrom(src => src.TotalPendingBlocks))
+            .ForMember(dest => dest.ServerUptime, opt => opt.Ignore());
 
-        CreateMap<WorkerPerformanceStats, Api.Responses.WorkerPerformanceStats>();
+        CreateMap<WorkerPerformanceStats, Api.Responses.WorkerPerformanceStats>()
+            .ForMember(dest => dest.Uptime, opt => opt.Ignore());
         CreateMap<WorkerPerformanceStatsContainer, Api.Responses.WorkerPerformanceStatsContainer>();
         CreateMap<MinerWorkerPerformanceStats, Api.Responses.MinerPerformanceStats>();
 
