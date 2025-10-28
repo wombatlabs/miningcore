@@ -1007,8 +1007,8 @@ public class PoolApiController : ApiControllerBase
         if(string.IsNullOrWhiteSpace(value))
             return value;
 
-        const int prefixLength = 6;
-        const int suffixLength = 6;
+        const int prefixLength = 8;
+        const int suffixLength = 8;
         var trimmed = value.Trim();
 
         if(trimmed.Length <= prefixLength + suffixLength + 3)
