@@ -1,9 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Linq;
 using Autofac;
 using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using Miningcore.Api.Responses;
 using Miningcore.Configuration;
 using Miningcore.Persistence;
 using Miningcore.Util;
@@ -78,5 +80,20 @@ public abstract class ApiControllerBase : ControllerBase
             throw new ApiException($"Unknown pool {poolId}", HttpStatusCode.NotFound);
 
         return pool;
+    }
+
+    protected static UptimeInfo CreateUptimeInfo(TimeSpan span)
+    {
+        if(span < TimeSpan.Zero)
+            span = TimeSpan.Zero;
+
+        span = TimeSpan.FromSeconds(Math.Floor(span.TotalSeconds));
+
+        return new UptimeInfo
+        {
+            Days = span.Days,
+            Hours = span.Hours,
+            Minutes = span.Minutes
+        };
     }
 }

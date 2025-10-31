@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Data;
-using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Net;
@@ -569,7 +568,6 @@ public class PoolApiController : ApiControllerBase
                 }
             }
 
-            stats.ServerUptime = CreateUptimeInfo(GetServerUptimeSpan(now));
         }
 
         return stats;
@@ -1007,29 +1005,14 @@ public class PoolApiController : ApiControllerBase
         if(string.IsNullOrWhiteSpace(value))
             return value;
 
-        const int prefixLength = 8;
-        const int suffixLength = 8;
+        const int prefixLength = 6;
+        const int suffixLength = 6;
         var trimmed = value.Trim();
 
         if(trimmed.Length <= prefixLength + suffixLength + 3)
             return trimmed;
 
         return $"{trimmed.Substring(0, prefixLength)}...{trimmed.Substring(trimmed.Length - suffixLength)}";
-    }
-
-    private static UptimeInfo CreateUptimeInfo(TimeSpan span)
-    {
-        if(span < TimeSpan.Zero)
-            span = TimeSpan.Zero;
-
-        span = TimeSpan.FromSeconds(Math.Floor(span.TotalSeconds));
-
-        return new UptimeInfo
-        {
-            Days = span.Days,
-            Hours = span.Hours,
-            Minutes = span.Minutes
-        };
     }
 
     private static TimeSpan CalculateWorkerUptimeSpan(MinerWorkerActivity activity, DateTime now)
@@ -1046,12 +1029,6 @@ public class PoolApiController : ApiControllerBase
             return TimeSpan.Zero;
 
         return effectiveEnd - activity.FirstShare;
-    }
-
-    private static TimeSpan GetServerUptimeSpan(DateTime now)
-    {
-        var startTimeUtc = Process.GetCurrentProcess().StartTime.ToUniversalTime();
-        return now - startTimeUtc;
     }
 
     private static ulong ToUInt64(double value)

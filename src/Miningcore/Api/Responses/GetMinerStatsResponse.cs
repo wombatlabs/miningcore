@@ -34,7 +34,6 @@ public class MinerStats
     public WorkerPerformanceStatsContainer[] PerformanceSamples { get; set; }
     public long TotalConfirmedBlocks { get; set; }
     public long TotalPendingBlocks { get; set; }
-    public UptimeInfo ServerUptime { get; set; }
 }
 
 public class UptimeInfo

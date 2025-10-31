@@ -1,13 +1,15 @@
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Globalization;
 using Autofac;
 using Microsoft.AspNetCore.Mvc;
+using Miningcore.Api.Responses;
 using Miningcore.Blockchain;
 using Miningcore.Extensions;
 using Miningcore.Mining;
 using Miningcore.Persistence.Model;
 using Miningcore.Persistence.Repositories;
 using Miningcore.Time;
-using System.Collections.Concurrent;
-using System.Globalization;
 
 namespace Miningcore.Api.Controllers;
 
@@ -79,6 +81,16 @@ public class ClusterApiController : ApiControllerBase
         }
 
         return blocks;
+    }
+
+    [HttpGet("uptime")]
+    public ActionResult<UptimeInfo> GetServerUptime()
+    {
+        var now = clock.Now;
+        var startTimeUtc = Process.GetCurrentProcess().StartTime.ToUniversalTime();
+        var uptimeSpan = now - startTimeUtc;
+
+        return CreateUptimeInfo(uptimeSpan);
     }
 
     #endregion // Actions
