@@ -1367,6 +1367,35 @@
         "explorerTxLink": "https://explorer.foxdcoin.com/tx/{0}",
         "explorerAccountLink": "https://explorer.foxdcoin.com/address/{0}"
     },
+    "fractal-bitcoin": {
+        "name": "Fractal Bitcoin",
+        "canonicalName": "Fractal-Bitcoin",
+        "symbol": "FB",
+        "family": "bitcoin",
+        "website": "https://fractalbitcoin.io/",
+        "github": "https://github.com/fractal-bitcoin/fractal",
+        "market": "https://www.coingecko.com/en/coins/fractal-bitcoin",
+        "twitter": "https://x.com/fractal_bitcoin",
+        "telegram": "",
+        "discord": "",
+        "coinbaseHasher": {
+            "hash": "sha256d"
+        },
+        "headerHasher": {
+            "hash": "sha256d"
+        },
+        "blockHasher": {
+            "hash": "reverse",
+            "args": [
+                {
+                    "hash": "sha256d"
+                }
+            ]
+        },
+        "explorerBlockLink": "https://uniscan.cc/fractal/block/$height$",
+        "explorerTxLink": "https://uniscan.cc/fractal/tx/{0}",
+        "explorerAccountLink": "https://uniscan.cc/fractal/address/{0}"
+    },
     "freecash": {
         "name": "Free Cash",
         "canonicalName": "Freecash",

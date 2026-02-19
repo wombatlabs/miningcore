@@ -18,6 +18,7 @@
 - POW (proof-of-work) & POS (proof-of-stake) support
 - Detailed per-pool logging to console & filesystem
 - Runs on Linux and Windows
+- Multiple payment schemes: PPLNS, PROP, SOLO, PPS, and FPPS (PPS and FPPS are untested. Use at your own risk.)
 
 ## Support
 
@@ -139,7 +140,7 @@ Running and developing Miningcore on Windows is of course supported.
 
 ### Database setup
 
-Miningcore currently requires PostgreSQL 10 or higher.
+Miningcore currently requires PostgreSQL 10 or higher. PostgreSQL 15.x recommended.
 
 Run Postgres's `psql` tool:
 
