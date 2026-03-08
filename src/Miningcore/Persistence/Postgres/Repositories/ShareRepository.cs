@@ -149,14 +149,61 @@ public class ShareRepository : IShareRepository
             .ToArray();
     }
 
-    public async Task<MinerWorkerActivity[]> GetMinerWorkerActivityAsync(IDbConnection con, string poolId, string miner, CancellationToken ct)
+    public async Task<MinerWorkerActivity[]> GetMinerWorkerActivityAsync(IDbConnection con, string poolId, string miner, TimeSpan offlineThreshold, CancellationToken ct)
     {
-        const string query = @"SELECT miner, worker, MIN(created) AS firstshare, MAX(created) AS lastshare
-            FROM shares
-            WHERE poolid = @poolId AND miner = @miner
-            GROUP BY miner, worker";
+        var offlineThresholdSeconds = (int) Math.Max(0, offlineThreshold.TotalSeconds);
+        const string query = @"WITH ordered AS
+            (
+                SELECT
+                    miner,
+                    COALESCE(worker, '') AS worker,
+                    created,
+                    LAG(created) OVER (PARTITION BY miner, COALESCE(worker, '') ORDER BY created) AS prev_created
+                FROM shares
+                WHERE poolid = @poolId AND miner = @miner
+            ),
+            gaps AS
+            (
+                SELECT
+                    miner,
+                    worker,
+                    created,
+                    CASE
+                        WHEN prev_created IS NULL THEN 1
+                        WHEN created - prev_created > (@offlineThresholdSeconds * INTERVAL '1 second') THEN 1
+                        ELSE 0
+                    END AS is_new_session
+                FROM ordered
+            ),
+            sessions AS
+            (
+                SELECT
+                    miner,
+                    worker,
+                    created,
+                    SUM(is_new_session) OVER (PARTITION BY miner, worker ORDER BY created) AS session_id
+                FROM gaps
+            ),
+            last_session AS
+            (
+                SELECT
+                    miner,
+                    worker,
+                    MAX(session_id) AS session_id
+                FROM sessions
+                GROUP BY miner, worker
+            )
+            SELECT
+                s.miner,
+                s.worker,
+                MIN(s.created) AS firstshare,
+                MAX(s.created) AS lastshare
+            FROM sessions s
+            JOIN last_session ls
+                ON ls.miner = s.miner AND ls.worker = s.worker AND ls.session_id = s.session_id
+            GROUP BY s.miner, s.worker";
 
-        return (await con.QueryAsync<MinerWorkerActivity>(new CommandDefinition(query, new { poolId, miner }, cancellationToken: ct)))
+        return (await con.QueryAsync<MinerWorkerActivity>(new CommandDefinition(query, new { poolId, miner, offlineThresholdSeconds }, cancellationToken: ct)))
             .ToArray();
     }
 

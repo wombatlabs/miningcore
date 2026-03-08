@@ -25,9 +25,9 @@ public class StatsRepository : IStatsRepository
     {
         var mapped = mapper.Map<Entities.PoolStats>(stats);
 
-        const string query = @"INSERT INTO poolstats(poolid, connectedminers, poolhashrate, networkhashrate,
+        const string query = @"INSERT INTO poolstats(poolid, connectedminers, totalwallets, poolhashrate, networkhashrate,
             networkdifficulty, lastnetworkblocktime, blockheight, connectedpeers, sharespersecond, created)
-            VALUES(@poolid, @connectedminers, @poolhashrate, @networkhashrate, @networkdifficulty,
+            VALUES(@poolid, @connectedminers, @totalwallets, @poolhashrate, @networkhashrate, @networkdifficulty,
             @lastnetworkblocktime, @blockheight, @connectedpeers, @sharespersecond, @created)";
 
         await con.ExecuteAsync(new CommandDefinition(query, mapped, tx, cancellationToken: ct));
@@ -74,7 +74,8 @@ public class StatsRepository : IStatsRepository
 
         var query = @$"SELECT date_trunc('{trunc}', created) AS created,
             AVG(poolhashrate) AS poolhashrate, AVG(networkhashrate) AS networkhashrate, AVG(networkdifficulty) AS networkdifficulty,
-            CAST(AVG(connectedminers) AS BIGINT) AS connectedminers
+            CAST(AVG(connectedminers) AS BIGINT) AS connectedminers,
+            CAST(AVG(totalwallets) AS BIGINT) AS totalwallets
             FROM poolstats
             WHERE poolid = @poolId AND created >= @start AND created <= @end
             GROUP BY date_trunc('{trunc}', created)

@@ -12,6 +12,7 @@ public class TransparencyInfo
     public double NetworkDifficulty { get; set; }
     public uint Miners { get; set; }
     public uint Workers { get; set; }
+    public uint TotalWallets { get; set; }
     public float Fee { get; set; }
     public ulong BlockHeight { get; set; }
 }

@@ -117,7 +117,15 @@ public class StatsRecorder : BackgroundService
             if (result.Length > 0)
             {
                 // pool miners
-                pool.PoolStats.ConnectedMiners = byMiner.Length; // update connected miners
+                var totalWallets = byMiner.Length;
+                var totalDevices = result
+                    .Select(x => (Miner: x.Miner, Worker: x.Worker ?? string.Empty))
+                    .Distinct()
+                    .Count();
+
+                // update connected miners/devices and wallets
+                pool.PoolStats.ConnectedMiners = totalDevices;
+                pool.PoolStats.TotalWallets = totalWallets;
 
                 // Stats calc windows
                 var timeFrameBeforeFirstShare = ((result.Min(x => x.FirstShare) - timeFrom).TotalSeconds);
@@ -143,6 +151,7 @@ public class StatsRecorder : BackgroundService
             {
                 // reset
                 pool.PoolStats.ConnectedMiners = 0;
+                pool.PoolStats.TotalWallets = 0;
                 pool.PoolStats.PoolHashrate = 0;
                 pool.PoolStats.SharesPerSecond = 0;
 

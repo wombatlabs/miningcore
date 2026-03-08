@@ -49,6 +49,7 @@ public class PoolApiController : ApiControllerBase
 
     private static readonly ILogger logger = LogManager.GetCurrentClassLogger();
     private static readonly TimeSpan WorkerActiveGracePeriod = TimeSpan.FromMinutes(15);
+    private static readonly TimeSpan WorkerOfflineResetThreshold = TimeSpan.FromMinutes(30);
 
     #region Actions
 
@@ -140,11 +141,19 @@ public class PoolApiController : ApiControllerBase
                 var poolHashrate = poolInstance?.PoolStats?.PoolHashrate ??
                     stats?.PoolHashrate ?? 0d;
 
-                var poolMiners = poolInstance?.PoolStats?.ConnectedMiners ??
-                    stats?.ConnectedMiners ?? 0;
-
                 var workerHashrates = await cf.Run(con => statsRepo.GetPoolMinerWorkerHashratesAsync(con, config.Id, ct));
                 var totalWorkers = (uint) workerHashrates.Length;
+                var totalWallets = poolInstance?.PoolStats?.TotalWallets ??
+                    stats?.TotalWallets ?? 0;
+
+                var connectedMiners = poolInstance?.PoolStats?.ConnectedMiners ??
+                    stats?.ConnectedMiners ?? 0;
+
+                if(totalWallets <= 0 && totalWorkers > 0)
+                    totalWallets = workerHashrates.Select(x => x.Miner).Distinct().Count();
+
+                if(connectedMiners <= 0 && totalWorkers > 0)
+                    connectedMiners = (int) totalWorkers;
 
                 var networkStats = poolInstance?.NetworkStats ?? poolInfo.NetworkStats;
                 var networkHashrate = networkStats?.NetworkHashrate ??
@@ -166,8 +175,9 @@ public class PoolApiController : ApiControllerBase
                     Hashrate = ToUInt64(poolHashrate),
                     NetworkHashrate = ToUInt64(networkHashrate),
                     NetworkDifficulty = networkDifficulty,
-                    Miners = ToUInt32(poolMiners),
+                    Miners = ToUInt32(connectedMiners),
                     Workers = totalWorkers,
+                    TotalWallets = ToUInt32(totalWallets),
                     Fee = poolInfo.PoolFeePercent,
                     BlockHeight = blockHeight
                 };
@@ -311,7 +321,7 @@ public class PoolApiController : ApiControllerBase
 
     [HttpGet("{poolId}/miners")]
     public async Task<MinerPerformanceStats[]> PagePoolMinersAsync(
-        string poolId, [FromQuery] int page, [FromQuery] int pageSize = 15, [FromQuery] uint topMinersRange = 24)
+        string poolId, [FromQuery] int page, [FromQuery] int pageSize = 100, [FromQuery] uint topMinersRange = 24)
     {
         var pool = GetPool(poolId);
         var ct = HttpContext.RequestAborted;
@@ -547,7 +557,7 @@ public class PoolApiController : ApiControllerBase
             stats.TotalConfirmedBlocks = totalConfirmedBlocks;
             stats.TotalPendingBlocks = totalPendingBlocks;
 
-            var workerActivity = await cf.Run(con => shareRepo.GetMinerWorkerActivityAsync(con, pool.Id, address, ct));
+            var workerActivity = await cf.Run(con => shareRepo.GetMinerWorkerActivityAsync(con, pool.Id, address, WorkerOfflineResetThreshold, ct));
             var now = clock.Now;
 
             if(workerActivity?.Length > 0 && stats.Performance?.Workers != null && stats.Performance.Workers.Count > 0)
