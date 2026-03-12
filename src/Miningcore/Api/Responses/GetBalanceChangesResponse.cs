@@ -7,4 +7,5 @@ public class BalanceChange
     public decimal Amount { get; set; }
     public string Usage { get; set; }
     public DateTime Created { get; set; }
+    public DateTime Updated { get; set; }
 }

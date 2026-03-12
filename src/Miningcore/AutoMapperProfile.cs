@@ -55,11 +55,15 @@ public class AutoMapperProfile : Profile
             .ForMember(dest => dest.Coin, opt => opt.MapFrom(src => src.Template));
 
         CreateMap<PoolStats, Api.Responses.PoolInfo>();
-        CreateMap<PoolStats, Api.Responses.AggregatedPoolStats>();
-        CreateMap<Block, Api.Responses.Block>();
+        CreateMap<PoolStats, Api.Responses.AggregatedPoolStats>()
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Created));
+        CreateMap<Block, Api.Responses.Block>()
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Created));
         CreateMap<MinerSettings, Api.Responses.MinerSettings>();
-        CreateMap<Payment, Api.Responses.Payment>();
-        CreateMap<BalanceChange, Api.Responses.BalanceChange>();
+        CreateMap<Payment, Api.Responses.Payment>()
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Created));
+        CreateMap<BalanceChange, Api.Responses.BalanceChange>()
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Created));
         CreateMap<PoolPaymentProcessingConfig, Api.Responses.ApiPoolPaymentProcessingConfig>();
 
         CreateMap<MinerStats, Api.Responses.MinerStats>()
@@ -69,7 +73,8 @@ public class AutoMapperProfile : Profile
             .ForMember(dest => dest.TotalPendingBlocks, opt => opt.MapFrom(src => src.TotalPendingBlocks));
 
         CreateMap<WorkerPerformanceStats, Api.Responses.WorkerPerformanceStats>();
-        CreateMap<WorkerPerformanceStatsContainer, Api.Responses.WorkerPerformanceStatsContainer>();
+        CreateMap<WorkerPerformanceStatsContainer, Api.Responses.WorkerPerformanceStatsContainer>()
+            .ForMember(dest => dest.Updated, opt => opt.MapFrom(src => src.Created));
         CreateMap<MinerWorkerPerformanceStats, Api.Responses.MinerPerformanceStats>();
 
         // PostgreSQL

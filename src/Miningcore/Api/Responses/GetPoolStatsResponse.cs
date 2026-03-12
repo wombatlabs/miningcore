@@ -9,6 +9,7 @@ public partial class AggregatedPoolStats
     public double NetworkDifficulty { get; set; }
 
     public DateTime Created { get; set; }
+    public DateTime Updated { get; set; }
 }
 
 public class GetPoolStatsResponse

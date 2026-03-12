@@ -13,6 +13,8 @@ public class Block
     public double? MinerEffort { get; set; }
     public string TransactionConfirmationData { get; set; }
     public string Miner { get; set; }
+    public string Worker { get; set; }
+    public string UserAgent { get; set; }
     public decimal Reward { get; set; }
     public string Source { get; set; }
     public string Hash { get; set; }

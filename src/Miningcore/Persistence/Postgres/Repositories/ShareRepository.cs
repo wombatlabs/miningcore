@@ -134,6 +134,46 @@ public class ShareRepository : IShareRepository
             .ToArray();
     }
 
+    public Task<double?> GetMinerBestShareDifficultyAsync(IDbConnection con, string poolId, string miner, CancellationToken ct)
+    {
+        const string query = @"SELECT MAX(difficulty) FROM shares WHERE poolid = @poolId AND miner = @miner";
+
+        return con.ExecuteScalarAsync<double?>(new CommandDefinition(query, new { poolId, miner }, cancellationToken: ct));
+    }
+
+    public Task<DateTime?> GetMinerLastShareAsync(IDbConnection con, string poolId, string miner, CancellationToken ct)
+    {
+        const string query = @"SELECT MAX(created) FROM shares WHERE poolid = @poolId AND miner = @miner";
+
+        return con.ExecuteScalarAsync<DateTime?>(new CommandDefinition(query, new { poolId, miner }, cancellationToken: ct));
+    }
+
+    public async Task<MinerWorkerShareStats[]> GetMinerWorkerShareStatsAsync(IDbConnection con, string poolId, string miner, CancellationToken ct)
+    {
+        const string query = @"SELECT COALESCE(worker, '') AS worker,
+            MAX(difficulty) AS bestdifficulty,
+            MAX(created) AS lastseen
+            FROM shares
+            WHERE poolid = @poolId AND miner = @miner
+            GROUP BY 1";
+
+        return (await con.QueryAsync<MinerWorkerShareStats>(new CommandDefinition(query, new { poolId, miner }, cancellationToken: ct)))
+            .ToArray();
+    }
+
+    public async Task<MinerShareStats[]> GetMinersShareStatsAsync(IDbConnection con, string poolId, string[] miners, CancellationToken ct)
+    {
+        const string query = @"SELECT miner,
+            MAX(difficulty) AS bestdifficulty,
+            MAX(created) AS lastseen
+            FROM shares
+            WHERE poolid = @poolId AND miner = ANY(@miners)
+            GROUP BY miner";
+
+        return (await con.QueryAsync<MinerShareStats>(new CommandDefinition(query, new { poolId, miners }, cancellationToken: ct)))
+            .ToArray();
+    }
+
     public async Task<KeyValuePair<string, double>[]> GetAccumulatedUserAgentShareDifficultyBetweenAsync(
         IDbConnection con, string poolId, DateTime start, DateTime end, bool byVersion, CancellationToken ct)
     {

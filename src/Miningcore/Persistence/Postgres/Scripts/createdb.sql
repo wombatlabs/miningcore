@@ -31,6 +31,8 @@ CREATE TABLE blocks
         minereffort FLOAT NULL,
 	transactionconfirmationdata TEXT NOT NULL,
 	miner TEXT NULL,
+	worker TEXT NULL,
+	useragent TEXT NULL,
 	reward decimal(28,12) NULL,
     source TEXT NULL,
     hash TEXT NULL,

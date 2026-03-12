@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Concurrent;
 using System.Data;
 using System.Globalization;
@@ -94,6 +95,7 @@ public class PoolApiController : ApiControllerBase
                 var minersByHashrate = await cf.Run(con => statsRepo.PagePoolMinersByHashrateAsync(con, config.Id, from, 0, 15, ct));
 
                 result.TopMiners = minersByHashrate.Select(mapper.Map<MinerPerformanceStats>).ToArray();
+                await EnrichMinerPerformanceStatsAsync(config.Id, result.TopMiners, ct);
 
                 return result;
             }).ToArray())
@@ -173,6 +175,7 @@ public class PoolApiController : ApiControllerBase
         response.Pool.TopMiners = (await cf.Run(con => statsRepo.PagePoolMinersByHashrateAsync(con, pool.Id, from, 0, 15, ct)))
             .Select(mapper.Map<MinerPerformanceStats>)
             .ToArray();
+        await EnrichMinerPerformanceStatsAsync(pool.Id, response.Pool.TopMiners, ct);
 
         return response;
     }
@@ -227,6 +230,7 @@ public class PoolApiController : ApiControllerBase
         var miners = (await cf.Run(con => statsRepo.PagePoolMinersByHashrateAsync(con, pool.Id, start, page, pageSize, ct)))
             .Select(mapper.Map<MinerPerformanceStats>)
             .ToArray();
+        await EnrichMinerPerformanceStatsAsync(pool.Id, miners, ct);
 
         return miners;
     }
@@ -401,6 +405,9 @@ public class PoolApiController : ApiControllerBase
             if(pool.Template.Family == CoinFamily.Bitcoin)
                 stats.PendingShares *= pool.Template.As<BitcoinTemplate>().ShareMultiplier;
 
+            stats.BestDifficulty = await cf.Run(con => shareRepo.GetMinerBestShareDifficultyAsync(con, pool.Id, address, ct));
+            stats.LastSeen = await cf.Run(con => shareRepo.GetMinerLastShareAsync(con, pool.Id, address, ct));
+
             // optional fields
             if(statsResult.LastPayment != null)
             {
@@ -423,6 +430,25 @@ public class PoolApiController : ApiControllerBase
             }
 
             stats.PerformanceSamples = await GetMinerPerformanceInternal(perfMode, pool, address, ct);
+
+            if(stats.Performance?.Workers?.Count > 0)
+            {
+                var workerShareStats = await cf.Run(con => shareRepo.GetMinerWorkerShareStatsAsync(con, pool.Id, address, ct));
+                if(workerShareStats.Length > 0)
+                {
+                    var workerShareStatsByWorker = workerShareStats
+                        .ToDictionary(x => x.Worker ?? string.Empty, x => x, StringComparer.Ordinal);
+
+                    foreach(var entry in stats.Performance.Workers)
+                    {
+                        if(workerShareStatsByWorker.TryGetValue(entry.Key ?? string.Empty, out var workerStats))
+                        {
+                            entry.Value.BestDifficulty = workerStats.BestDifficulty;
+                            entry.Value.LastSeen = workerStats.LastSeen;
+                        }
+                    }
+                }
+            }
 
             // add total confirmed and pending blocks
             var totalConfirmedBlocks = await cf.Run(con => statsRepo.GetMinerTotalConfirmedBlocksAsync(con, pool.Id, address, ct));
@@ -781,6 +807,39 @@ public class PoolApiController : ApiControllerBase
     }
 
     #endregion // Actions
+
+    private async Task EnrichMinerPerformanceStatsAsync(string poolId, MinerPerformanceStats[] miners, CancellationToken ct)
+    {
+        if(miners == null || miners.Length == 0)
+            return;
+
+        var minerAddresses = miners
+            .Select(x => x?.Miner)
+            .Where(x => !string.IsNullOrEmpty(x))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        if(minerAddresses.Length == 0)
+            return;
+
+        var shareStats = await cf.Run(con => shareRepo.GetMinersShareStatsAsync(con, poolId, minerAddresses, ct));
+        if(shareStats.Length == 0)
+            return;
+
+        var shareStatsByMiner = shareStats.ToDictionary(x => x.Miner, x => x, StringComparer.Ordinal);
+
+        foreach(var miner in miners)
+        {
+            if(string.IsNullOrEmpty(miner?.Miner))
+                continue;
+
+            if(shareStatsByMiner.TryGetValue(miner.Miner, out var stats))
+            {
+                miner.BestDifficulty = stats.BestDifficulty;
+                miner.LastSeen = stats.LastSeen;
+            }
+        }
+    }
 
     private async Task<Responses.WorkerPerformanceStatsContainer[]> GetMinerPerformanceInternal(
         SampleRange mode, PoolConfig pool, string address, CancellationToken ct)
