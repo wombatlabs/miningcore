@@ -405,7 +405,7 @@ public class PoolApiController : ApiControllerBase
             if(pool.Template.Family == CoinFamily.Bitcoin)
                 stats.PendingShares *= pool.Template.As<BitcoinTemplate>().ShareMultiplier;
 
-            stats.BestDifficulty = await cf.Run(con => shareRepo.GetMinerBestShareDifficultyAsync(con, pool.Id, address, ct));
+            stats.BestShare = await cf.Run(con => shareRepo.GetMinerBestShareDifficultyAsync(con, pool.Id, address, ct));
             stats.LastSeen = await cf.Run(con => shareRepo.GetMinerLastShareAsync(con, pool.Id, address, ct));
 
             // optional fields
@@ -443,7 +443,7 @@ public class PoolApiController : ApiControllerBase
                     {
                         if(workerShareStatsByWorker.TryGetValue(entry.Key ?? string.Empty, out var workerStats))
                         {
-                            entry.Value.BestDifficulty = workerStats.BestDifficulty;
+                            entry.Value.BestShare = workerStats.BestShare;
                             entry.Value.LastSeen = workerStats.LastSeen;
                         }
                     }
@@ -835,7 +835,7 @@ public class PoolApiController : ApiControllerBase
 
             if(shareStatsByMiner.TryGetValue(miner.Miner, out var stats))
             {
-                miner.BestDifficulty = stats.BestDifficulty;
+                miner.BestShare = stats.BestShare;
                 miner.LastSeen = stats.LastSeen;
             }
         }

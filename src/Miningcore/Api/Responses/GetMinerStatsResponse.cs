@@ -5,7 +5,7 @@ public class MinerPerformanceStats
     public string Miner { get; set; }
     public double Hashrate { get; set; }
     public double SharesPerSecond { get; set; }
-    public double? BestDifficulty { get; set; }
+    public double? BestShare { get; set; }
     public DateTime? LastSeen { get; set; }
 }
 
@@ -13,7 +13,7 @@ public class WorkerPerformanceStats
 {
     public double Hashrate { get; set; }
     public double SharesPerSecond { get; set; }
-    public double? BestDifficulty { get; set; }
+    public double? BestShare { get; set; }
     public DateTime? LastSeen { get; set; }
 }
 
@@ -31,7 +31,7 @@ public class MinerStats
     public decimal TotalPaid { get; set; }
     public decimal TodayPaid { get; set; }
     public double MinerEffort { get; set; }
-    public double? BestDifficulty { get; set; }
+    public double? BestShare { get; set; }
     public DateTime? LastSeen { get; set; }
     public DateTime? LastPayment { get; set; }
     public string LastPaymentLink { get; set; }

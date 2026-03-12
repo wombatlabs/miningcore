@@ -20,13 +20,13 @@ public record MinerWorkerHashrate
 public record MinerWorkerShareStats
 {
     public string Worker { get; init; }
-    public double? BestDifficulty { get; init; }
+    public double? BestShare { get; init; }
     public DateTime? LastSeen { get; init; }
 }
 
 public record MinerShareStats
 {
     public string Miner { get; init; }
-    public double? BestDifficulty { get; init; }
+    public double? BestShare { get; init; }
     public DateTime? LastSeen { get; init; }
 }
