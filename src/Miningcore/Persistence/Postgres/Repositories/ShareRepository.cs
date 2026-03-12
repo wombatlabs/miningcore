@@ -151,7 +151,7 @@ public class ShareRepository : IShareRepository
     public async Task<MinerWorkerShareStats[]> GetMinerWorkerShareStatsAsync(IDbConnection con, string poolId, string miner, CancellationToken ct)
     {
         const string query = @"SELECT COALESCE(worker, '') AS worker,
-            MAX(difficulty) AS bestdifficulty,
+            MAX(difficulty) AS bestshare,
             MAX(created) AS lastseen
             FROM shares
             WHERE poolid = @poolId AND miner = @miner
@@ -164,7 +164,7 @@ public class ShareRepository : IShareRepository
     public async Task<MinerShareStats[]> GetMinersShareStatsAsync(IDbConnection con, string poolId, string[] miners, CancellationToken ct)
     {
         const string query = @"SELECT miner,
-            MAX(difficulty) AS bestdifficulty,
+            MAX(difficulty) AS bestshare,
             MAX(created) AS lastseen
             FROM shares
             WHERE poolid = @poolId AND miner = ANY(@miners)
