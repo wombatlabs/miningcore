@@ -244,6 +244,7 @@ public class CryptonotePool : PoolBase
             if(requestAge > maxShareAge)
             {
                 logger.Warn(() => $"[{connection.ConnectionId}] Dropping stale share submission request (server overloaded?)");
+                context.Stats.StaleShares++;
                 return;
             }
 
@@ -311,6 +312,8 @@ public class CryptonotePool : PoolBase
             PublishTelemetry(TelemetryCategory.Share, clock.Now - tsRequest.Timestamp.UtcDateTime, false);
 
             // update client stats
+            if(ex.Code == StratumError.JobNotFound)
+                context.Stats.StaleShares++;
             context.Stats.InvalidShares++;
             logger.Info(() => $"[{connection.ConnectionId}] Share rejected: {ex.Message} [{context.UserAgent}]");
 

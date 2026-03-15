@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Data;
 using System.Globalization;
 using System.Net;
@@ -446,6 +447,47 @@ public class PoolApiController : ApiControllerBase
                             entry.Value.BestShare = workerStats.BestShare;
                             entry.Value.LastSeen = workerStats.LastSeen;
                         }
+                    }
+                }
+            }
+
+            if(pools.TryGetValue(pool.Id, out var poolInstance))
+            {
+                var liveWorkerStats = poolInstance.GetWorkerShareStats(address);
+                if(liveWorkerStats.Count > 0)
+                {
+                    if(stats.Performance == null)
+                    {
+                        stats.Performance = new WorkerPerformanceStatsContainer
+                        {
+                            Created = clock.Now,
+                            Updated = clock.Now,
+                            Workers = new Dictionary<string, WorkerPerformanceStats>()
+                        };
+                    }
+                    else if(stats.Performance.Workers == null)
+                    {
+                        stats.Performance.Workers = new Dictionary<string, WorkerPerformanceStats>();
+                    }
+
+                    foreach(var live in liveWorkerStats)
+                    {
+                        var workerKey = live.Worker ?? string.Empty;
+
+                        if(!stats.Performance.Workers.TryGetValue(workerKey, out var workerStats))
+                        {
+                            workerStats = new WorkerPerformanceStats
+                            {
+                                Hashrate = 0,
+                                SharesPerSecond = 0
+                            };
+
+                            stats.Performance.Workers[workerKey] = workerStats;
+                        }
+
+                        workerStats.ValidShares = live.ValidShares;
+                        workerStats.InvalidShares = live.InvalidShares;
+                        workerStats.StaleShares = live.StaleShares;
                     }
                 }
             }

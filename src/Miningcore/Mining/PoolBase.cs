@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Net;
 using System.Reactive.Disposables;
@@ -77,6 +79,45 @@ public abstract class PoolBase : StratumServer,
 
     protected abstract Task SetupJobManager(CancellationToken ct);
     protected abstract WorkerContextBase CreateWorkerContext();
+
+    public IReadOnlyCollection<WorkerShareStats> GetWorkerShareStats(string miner)
+    {
+        if(string.IsNullOrEmpty(miner))
+            return Array.Empty<WorkerShareStats>();
+
+        var result = new Dictionary<string, WorkerShareStats>(StringComparer.Ordinal);
+
+        foreach(var connection in connections.Values)
+        {
+            if(connection?.Context is not WorkerContextBase context)
+                continue;
+
+            if(!string.Equals(context.Miner, miner, StringComparison.Ordinal))
+                continue;
+
+            var worker = context.Worker ?? string.Empty;
+
+            if(!result.TryGetValue(worker, out var stats))
+            {
+                stats = new WorkerShareStats
+                {
+                    Miner = context.Miner,
+                    Worker = worker
+                };
+
+                result[worker] = stats;
+            }
+
+            if(context.Stats != null)
+            {
+                stats.ValidShares += context.Stats.ValidShares;
+                stats.InvalidShares += context.Stats.InvalidShares;
+                stats.StaleShares += context.Stats.StaleShares;
+            }
+        }
+
+        return new List<WorkerShareStats>(result.Values);
+    }
 
     protected double? GetStaticDiffFromPassparts(string[] parts)
     {

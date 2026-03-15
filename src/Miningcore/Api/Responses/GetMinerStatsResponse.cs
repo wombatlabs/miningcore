@@ -15,6 +15,9 @@ public class WorkerPerformanceStats
     public double SharesPerSecond { get; set; }
     public double? BestShare { get; set; }
     public DateTime? LastSeen { get; set; }
+    public int? ValidShares { get; set; }
+    public int? InvalidShares { get; set; }
+    public int? StaleShares { get; set; }
 }
 
 public class WorkerPerformanceStatsContainer
