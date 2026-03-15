@@ -10,6 +10,8 @@ using Microsoft.AspNetCore.Mvc.ActionConstraints;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Miningcore.Api.Extensions;
 using Miningcore.Api.Responses;
+using ApiWorkerPerformanceStats = Miningcore.Api.Responses.WorkerPerformanceStats;
+using ApiWorkerPerformanceStatsContainer = Miningcore.Api.Responses.WorkerPerformanceStatsContainer;
 using Miningcore.Blockchain;
 using Miningcore.Configuration;
 using Miningcore.Extensions;
@@ -458,16 +460,16 @@ public class PoolApiController : ApiControllerBase
                 {
                     if(stats.Performance == null)
                     {
-                        stats.Performance = new WorkerPerformanceStatsContainer
+                        stats.Performance = new ApiWorkerPerformanceStatsContainer
                         {
                             Created = clock.Now,
                             Updated = clock.Now,
-                            Workers = new Dictionary<string, WorkerPerformanceStats>()
+                            Workers = new Dictionary<string, ApiWorkerPerformanceStats>()
                         };
                     }
                     else if(stats.Performance.Workers == null)
                     {
-                        stats.Performance.Workers = new Dictionary<string, WorkerPerformanceStats>();
+                        stats.Performance.Workers = new Dictionary<string, ApiWorkerPerformanceStats>();
                     }
 
                     foreach(var live in liveWorkerStats)
@@ -476,7 +478,7 @@ public class PoolApiController : ApiControllerBase
 
                         if(!stats.Performance.Workers.TryGetValue(workerKey, out var workerStats))
                         {
-                            workerStats = new WorkerPerformanceStats
+                            workerStats = new ApiWorkerPerformanceStats
                             {
                                 Hashrate = 0,
                                 SharesPerSecond = 0
