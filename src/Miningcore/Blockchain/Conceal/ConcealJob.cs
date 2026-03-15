@@ -174,6 +174,7 @@ public class ConcealJob
         {
             BlockHeight = BlockTemplate.Height,
             Difficulty = stratumDifficulty,
+            ShareDifficulty = shareDiff,
         };
 
         if(isBlockCandidate)

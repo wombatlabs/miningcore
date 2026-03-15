@@ -407,6 +407,7 @@ public class EquihashJob
             BlockHeight = BlockTemplate.Height,
             NetworkDifficulty = Difficulty,
             Difficulty = stratumDifficulty,
+            ShareDifficulty = shareDiff,
         };
 
         if(isBlockCandidate)

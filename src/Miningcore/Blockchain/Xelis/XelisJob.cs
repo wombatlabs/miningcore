@@ -148,6 +148,7 @@ public class XelisJob
             BlockHeight = (long) BlockHeader.TopoHeight,
             NetworkDifficulty = Difficulty,
             Difficulty = stratumDifficulty,
+            ShareDifficulty = shareDiff,
         };
 
         if(isBlockCandidate)

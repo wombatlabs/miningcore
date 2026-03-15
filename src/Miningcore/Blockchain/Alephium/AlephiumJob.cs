@@ -147,7 +147,8 @@ public class AlephiumJob
         {
             BlockHeight = (long) BlockTemplate.Height,
             NetworkDifficulty = Difficulty,
-            Difficulty = stratumDifficulty / AlephiumConstants.ShareMultiplier
+            Difficulty = stratumDifficulty / AlephiumConstants.ShareMultiplier,
+            ShareDifficulty = shareDiff
         };
 
         if(isBlockCandidate)

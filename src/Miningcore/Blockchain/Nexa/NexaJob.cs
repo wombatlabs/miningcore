@@ -101,6 +101,7 @@ public class NexaJob
             BlockHeight = BlockTemplate.Height,
             NetworkDifficulty = Difficulty,
             Difficulty = stratumDifficulty / shareMultiplier,
+            ShareDifficulty = shareDiff,
             IsBlockCandidate = isBlockCandidate,
         };
 

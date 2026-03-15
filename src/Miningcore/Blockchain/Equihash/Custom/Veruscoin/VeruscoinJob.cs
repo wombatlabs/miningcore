@@ -299,6 +299,7 @@ public class VeruscoinJob : EquihashJob
             BlockHeight = BlockTemplate.Height,
             NetworkDifficulty = Difficulty,
             Difficulty = stratumDifficulty,
+            ShareDifficulty = shareDiff,
         };
 
         if(isBlockCandidate)

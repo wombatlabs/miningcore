@@ -25,7 +25,7 @@ public class ShareRepository : IShareRepository
 
         var pgCon = (NpgsqlConnection) con;
 
-        const string query = @"COPY shares (poolid, blockheight, difficulty,
+        const string query = @"COPY shares (poolid, blockheight, difficulty, sharedifficulty,
             networkdifficulty, miner, worker, useragent, ipaddress, source, created) FROM STDIN (FORMAT BINARY)";
 
         await using(var writer = await pgCon.BeginBinaryImportAsync(query, ct))
@@ -37,6 +37,7 @@ public class ShareRepository : IShareRepository
                 await writer.WriteAsync(share.PoolId, ct);
                 await writer.WriteAsync((long) share.BlockHeight, NpgsqlDbType.Bigint, ct);
                 await writer.WriteAsync(share.Difficulty, NpgsqlDbType.Double, ct);
+                await writer.WriteAsync(share.ShareDifficulty, NpgsqlDbType.Double, ct);
                 await writer.WriteAsync(share.NetworkDifficulty, NpgsqlDbType.Double, ct);
                 await writer.WriteAsync(share.Miner, ct);
                 await writer.WriteAsync(share.Worker, ct);
@@ -136,7 +137,7 @@ public class ShareRepository : IShareRepository
 
     public Task<double?> GetMinerBestShareDifficultyAsync(IDbConnection con, string poolId, string miner, CancellationToken ct)
     {
-        const string query = @"SELECT MAX(difficulty) FROM shares WHERE poolid = @poolId AND miner = @miner";
+        const string query = @"SELECT MAX(COALESCE(sharedifficulty, difficulty)) FROM shares WHERE poolid = @poolId AND miner = @miner";
 
         return con.ExecuteScalarAsync<double?>(new CommandDefinition(query, new { poolId, miner }, cancellationToken: ct));
     }
@@ -151,7 +152,7 @@ public class ShareRepository : IShareRepository
     public async Task<MinerWorkerShareStats[]> GetMinerWorkerShareStatsAsync(IDbConnection con, string poolId, string miner, CancellationToken ct)
     {
         const string query = @"SELECT COALESCE(worker, '') AS worker,
-            MAX(difficulty) AS bestshare,
+            MAX(COALESCE(sharedifficulty, difficulty)) AS bestshare,
             MAX(created) AS lastseen
             FROM shares
             WHERE poolid = @poolId AND miner = @miner
@@ -164,7 +165,7 @@ public class ShareRepository : IShareRepository
     public async Task<MinerShareStats[]> GetMinersShareStatsAsync(IDbConnection con, string poolId, string[] miners, CancellationToken ct)
     {
         const string query = @"SELECT miner,
-            MAX(difficulty) AS bestshare,
+            MAX(COALESCE(sharedifficulty, difficulty)) AS bestshare,
             MAX(created) AS lastseen
             FROM shares
             WHERE poolid = @poolId AND miner = ANY(@miners)

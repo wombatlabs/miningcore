@@ -92,7 +92,8 @@ public class KarlsencoinJob : KaspaJob
         {
             BlockHeight = (long) BlockTemplate.Header.DaaScore,
             NetworkDifficulty = Difficulty,
-            Difficulty = context.Difficulty / shareMultiplier
+            Difficulty = context.Difficulty / shareMultiplier,
+            ShareDifficulty = shareDiff
         };
 
         if(isBlockCandidate)

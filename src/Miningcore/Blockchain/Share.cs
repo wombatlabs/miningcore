@@ -49,6 +49,12 @@ public class Share
     public double Difficulty { get; set; }
 
     /// <summary>
+    /// Actual share difficulty derived from the submitted share hash
+    /// </summary>
+    [ProtoMember(17)]
+    public double? ShareDifficulty { get; set; }
+
+    /// <summary>
     /// Block this share refers to
     /// </summary>
     [ProtoMember(9)]

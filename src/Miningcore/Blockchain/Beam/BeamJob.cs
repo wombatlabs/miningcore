@@ -68,21 +68,22 @@ public class BeamJob
                 ratio = shareDiff / context.PreviousDifficulty.Value;
 
                 if(ratio < 0.99)
-                    return (new Share { Difficulty = shareDiff }, null, BeamConstants.BeamRpcLowDifficultyShare);
+                    return (new Share { Difficulty = shareDiff, ShareDifficulty = shareDiff }, null, BeamConstants.BeamRpcLowDifficultyShare);
 
                 // use previous difficulty
                 stratumDifficulty = context.PreviousDifficulty.Value;
             }
 
             else
-                return (new Share { Difficulty = shareDiff }, null, BeamConstants.BeamRpcLowDifficultyShare);
+                return (new Share { Difficulty = shareDiff, ShareDifficulty = shareDiff }, null, BeamConstants.BeamRpcLowDifficultyShare);
         }
 
         var result = new Share
         {
             BlockHeight = (long) BlockTemplate.Height,
             NetworkDifficulty = Difficulty,
-            Difficulty = stratumDifficulty
+            Difficulty = stratumDifficulty,
+            ShareDifficulty = shareDiff
         };
 
         if(isBlockCandidate)

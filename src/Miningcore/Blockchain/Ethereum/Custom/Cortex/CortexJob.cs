@@ -136,7 +136,8 @@ public class CortexJob : EthereumJob
             Worker = workerName,
             UserAgent = context.UserAgent,
             IsBlockCandidate = isBlockCandidate,
-            Difficulty = stratumDifficulty * EthereumConstants.Pow2x32
+            Difficulty = stratumDifficulty * EthereumConstants.Pow2x32,
+            ShareDifficulty = shareDiff
         };
 
         if(share.IsBlockCandidate)

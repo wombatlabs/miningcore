@@ -83,6 +83,7 @@ public class TelestaiJob : ProgpowJob
             BlockHeight = BlockTemplate.Height,
             NetworkDifficulty = Difficulty,
             Difficulty = stratumDifficulty / shareMultiplier,
+            ShareDifficulty = shareDiff,
         };
 
         if(!isBlockCandidate)

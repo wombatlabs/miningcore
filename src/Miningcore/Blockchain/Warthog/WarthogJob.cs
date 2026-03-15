@@ -210,6 +210,7 @@ public class WarthogJob
             BlockHeight = BlockTemplate.Data.Height,
             NetworkDifficulty = Difficulty,
             Difficulty = stratumDifficulty,
+            ShareDifficulty = shareDiff,
         };
 
         if(isBlockCandidate)
