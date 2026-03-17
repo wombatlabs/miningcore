@@ -91,7 +91,7 @@ public class KiiroJob : ProgpowJob
         }
 
         result.IsBlockCandidate = true;
-        
+
         var nonceBytes = (Span<byte>) nonce.ToString("X").HexToReverseByteArray();
         var mixHashBytes = (Span<byte>) mixHash.HexToReverseByteArray();
         // concat headerBytes, nonceBytes and mixHashBytes
@@ -101,7 +101,7 @@ public class KiiroJob : ProgpowJob
         nonceBytes.CopyTo(headerBytesNonceMixHasBytes[offset..]);
         offset += nonceBytes.Length;
         mixHashBytes.CopyTo(headerBytesNonceMixHasBytes[offset..]);
-        
+
         Span<byte> blockHash = stackalloc byte[32];
         blockHasher.Digest(headerBytesNonceMixHasBytes, blockHash);
         result.BlockHash = blockHash.ToHexString();
@@ -111,84 +111,36 @@ public class KiiroJob : ProgpowJob
 
         return (result, blockHex);
     }
-    
+
     #region Masternodes
 
     protected override Money CreateMasternodeOutputs(Transaction tx, Money reward)
     {
-        if(masterNodeParameters.Masternode != null)
+        foreach(var mn in Enumerate<Masternode>((object) masterNodeParameters?.Masternode))
         {
-            Masternode[] masternodes;
-
-            // Dash v13 Multi-Master-Nodes
-            if(masterNodeParameters.Masternode.Type == JTokenType.Array)
-                masternodes = masterNodeParameters.Masternode.ToObject<Masternode[]>();
-            else
-                masternodes = new[] { masterNodeParameters.Masternode.ToObject<Masternode>() };
-
-            if(masternodes != null)
+            if(!string.IsNullOrEmpty(mn?.Script))
             {
-                foreach(var masterNode in masternodes)
-                {
-                    if(!string.IsNullOrEmpty(masterNode.Script))
-                    {
-                        Script payeeAddress = new (masterNode.Script.HexToByteArray());
-                        var payeeReward = masterNode.Amount;
-
-                        tx.Outputs.Add(payeeReward, payeeAddress);
-                    /*  A block reward of 30 KIIRO/block is divided as follows:
-                    
-                            Miners (20%, 6 KIIRO)
-                            Masternodes (61%, 18.3 KIIRO)
-                            DataMining Fund (1%, 0.3 KIIRO)
-                            Developer Fund (9%, 2.7 KIIRO)
-                            Community Fund (9%, 2.7 KIIRO)
-                    */
-                        //reward -= payeeReward; // KIIRO does not deduct payeeReward from coinbasevalue (reward) since it's the amount which goes to miners
-                    }
-                }
+                var spk = new Script(mn.Script.HexToByteArray());
+                var pay = mn.Amount;
+                tx.Outputs.Add(pay, spk);
             }
         }
 
         return reward;
     }
-
     #endregion // Masternodes
- 
+
     #region Community
 
     protected override Money CreateCommunityOutputs(Transaction tx, Money reward)
     {
-        if (communityParameters.Community != null)
+        foreach(var c in Enumerate<Community>((object) communityParameters?.Community))
         {
-            Community[] communitys;
-            if (communityParameters.Community.Type == JTokenType.Array)
-                communitys = communityParameters.Community.ToObject<Community[]>();
-            else
-                communitys = new[] { communityParameters.Community.ToObject<Community>() };
-
-            if(communitys != null)
+            if(!string.IsNullOrEmpty(c?.Script))
             {
-                foreach(var Community in communitys)
-                {
-                    if(!string.IsNullOrEmpty(Community.Script))
-                    {
-                        Script payeeAddress = new (Community.Script.HexToByteArray());
-                        var payeeReward = Community.Amount;
-
-                        tx.Outputs.Add(payeeReward, payeeAddress);
-                    /*  A block reward of 30 KIIRO/block is divided as follows:
-                    
-                            Miners (20%, 6 KIIRO)
-                            Masternodes (61%, 18.3 KIIRO)
-                            DataMining Fund (1%, 0.3 KIIRO)
-                            Developer Fund (9%, 2.7 KIIRO)
-                            Community Fund (9%, 2.7 KIIRO)
-                    */
-                        //reward -= payeeReward; // KIIRO does not deduct payeeReward from coinbasevalue (reward) since it's the amount which goes to miners
-
-                    }
-                }
+                var spk = new Script(c.Script.HexToByteArray());
+                var pay = c.Amount;
+                tx.Outputs.Add(pay, spk);
             }
         }
 
@@ -196,41 +148,18 @@ public class KiiroJob : ProgpowJob
     }
 
     #endregion //Community
- 
+
     #region Developer
 
     protected override Money CreateDeveloperOutputs(Transaction tx, Money reward)
     {
-        if (developerParameters.Developer != null)
+        foreach(var d in Enumerate<Developer>((object) developerParameters?.Developer))
         {
-            Developer[] developers;
-            if (developerParameters.Developer.Type == JTokenType.Array)
-                developers = developerParameters.Developer.ToObject<Developer[]>();
-            else
-                developers = new[] { developerParameters.Developer.ToObject<Developer>() };
-
-            if(developers != null)
+            if(!string.IsNullOrEmpty(d?.Script))
             {
-                foreach(var Developer in developers)
-                {
-                    if(!string.IsNullOrEmpty(Developer.Script))
-                    {
-                        Script payeeAddress = new (Developer.Script.HexToByteArray());
-                        var payeeReward = Developer.Amount;
-
-                        tx.Outputs.Add(payeeReward, payeeAddress);
-                    /*  A block reward of 30 KIIRO/block is divided as follows:
-                    
-                            Miners (20%, 6 KIIRO)
-                            Masternodes (61%, 18.3 KIIRO)
-                            DataMining Fund (1%, 0.3 KIIRO)
-                            Developer Fund (9%, 2.7 KIIRO)
-                            Community Fund (9%, 2.7 KIIRO)
-                    */
-                        //reward -= payeeReward; // KIIRO does not deduct payeeReward from coinbasevalue (reward) since it's the amount which goes to miners
-
-                    }
-                }
+                var spk = new Script(d.Script.HexToByteArray());
+                var pay = d.Amount;
+                tx.Outputs.Add(pay, spk);
             }
         }
 
@@ -238,4 +167,36 @@ public class KiiroJob : ProgpowJob
     }
 
     #endregion //Developer
+
+    private static IEnumerable<T> Enumerate<T>(object src)
+    {
+        if(src == null)
+            yield break;
+
+        if(src is JToken jt)
+        {
+            if(jt.Type == JTokenType.Array)
+            {
+                var arr = jt.ToObject<T[]>();
+                if(arr != null)
+                    foreach(var i in arr) yield return i;
+            }
+            else
+            {
+                var single = jt.ToObject<T>();
+                if(single != null)
+                    yield return single;
+            }
+            yield break;
+        }
+
+        if(src is IEnumerable<T> en)
+        {
+            foreach(var i in en) yield return i;
+            yield break;
+        }
+
+        if(src is T t)
+            yield return t;
+    }
 }

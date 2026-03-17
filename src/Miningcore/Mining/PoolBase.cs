@@ -1,3 +1,4 @@
+// src/Miningcore/Mining/PoolBase.cs
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.Net;

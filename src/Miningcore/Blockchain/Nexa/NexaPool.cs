@@ -45,7 +45,7 @@ public class NexaPool : PoolBase
     {
         var request = tsRequest.Value;
 
-        if(request.Id == null)
+        if (request.Id == null)
             throw new StratumException(StratumError.MinusOne, "missing request id");
 
         var context = connection.ContextAs<NexaWorkerContext>();
@@ -67,7 +67,7 @@ public class NexaPool : PoolBase
         // [Respect the goddamn standards Nicehack :(]
         var response = new JsonRpcResponse<object[]>(data, request.Id);
 
-        if(context.IsNicehash || poolConfig.EnableAsicBoost == true)
+        if (context.IsNicehash || poolConfig.EnableAsicBoost == true)
         {
             response.Extra = new Dictionary<string, object>();
             response.Extra["error"] = null;
@@ -82,7 +82,7 @@ public class NexaPool : PoolBase
         // Nicehash support
         var nicehashDiff = await GetNicehashStaticMinDiff(context, coin.Name, coin.GetAlgorithmName());
 
-        if(nicehashDiff.HasValue)
+        if (nicehashDiff.HasValue)
         {
             logger.Info(() => $"[{connection.ConnectionId}] Nicehash detected. Using API supplied difficulty of {nicehashDiff.Value}");
 
@@ -101,7 +101,7 @@ public class NexaPool : PoolBase
     {
         var request = tsRequest.Value;
 
-        if(request.Id == null)
+        if (request.Id == null)
             throw new StratumException(StratumError.MinusOne, "missing request id");
 
         var context = connection.ContextAs<NexaWorkerContext>();
@@ -120,14 +120,14 @@ public class NexaPool : PoolBase
         context.Miner = minerName;
         context.Worker = workerName;
 
-        if(context.IsAuthorized)
+        if (context.IsAuthorized)
         {
             // Nicehash's stupid validator insists on "error" property present
             // in successful responses which is a violation of the JSON-RPC spec
             // [Respect the goddamn standards Nicehack :(]
             var response = new JsonRpcResponse<object>(context.IsAuthorized, request.Id);
 
-            if(context.IsNicehash || poolConfig.EnableAsicBoost == true)
+            if (context.IsNicehash || poolConfig.EnableAsicBoost == true)
             {
                 response.Extra = new Dictionary<string, object>();
                 response.Extra["error"] = null;
@@ -143,7 +143,7 @@ public class NexaPool : PoolBase
             var staticDiff = GetStaticDiffFromPassparts(passParts);
 
             // Static diff
-            if(staticDiff.HasValue &&
+            if (staticDiff.HasValue &&
                (context.VarDiff != null && staticDiff.Value >= context.VarDiff.Config.MinDiff ||
                    context.VarDiff == null && staticDiff.Value > context.Difficulty))
             {
@@ -160,7 +160,7 @@ public class NexaPool : PoolBase
         {
             await connection.RespondErrorAsync(StratumError.UnauthorizedWorker, "Authorization failed", request.Id, context.IsAuthorized);
 
-            if(clusterConfig?.Banning?.BanOnLoginFailure is null or true)
+            if (clusterConfig?.Banning?.BanOnLoginFailure is null or true)
             {
                 // issue short-time ban if unauthorized to prevent DDos on daemon (validateaddress RPC)
                 logger.Info(() => $"[{connection.ConnectionId}] Banning unauthorized worker {minerName} for {loginFailureBanTimeout.TotalSeconds} sec");
@@ -178,13 +178,19 @@ public class NexaPool : PoolBase
         var job = manager.GetJobForStratum();
 
         // update context
-        lock(context)
+        lock (context)
         {
             context.AddJob(job, manager.maxActiveJobs);
         }
 
+        // if job has GetJobParams(bool), use it; else, fallback.
+        var mi = job.GetType().GetMethod("GetJobParams", new[] { typeof(bool) });
+        if (mi != null)
+            return mi.Invoke(job, new object[] { cleanJob });
+
         return job.GetJobParams();
     }
+
 
     protected virtual async Task OnSubmitAsync(StratumConnection connection, Timestamped<JsonRpcRequest> tsRequest, CancellationToken ct)
     {
@@ -193,13 +199,13 @@ public class NexaPool : PoolBase
 
         try
         {
-            if(request.Id == null)
+            if (request.Id == null)
                 throw new StratumException(StratumError.MinusOne, "missing request id");
 
             // check age of submission (aged submissions are usually caused by high server load)
             var requestAge = clock.Now - tsRequest.Timestamp.UtcDateTime;
 
-            if(requestAge > maxShareAge)
+            if (requestAge > maxShareAge)
             {
                 logger.Warn(() => $"[{connection.ConnectionId}] Dropping stale share submission request (server overloaded?)");
                 return;
@@ -209,9 +215,9 @@ public class NexaPool : PoolBase
             context.LastActivity = clock.Now;
 
             // validate worker
-            if(!context.IsAuthorized)
+            if (!context.IsAuthorized)
                 throw new StratumException(StratumError.UnauthorizedWorker, "unauthorized worker");
-            else if(!context.IsSubscribed)
+            else if (!context.IsSubscribed)
                 throw new StratumException(StratumError.NotSubscribed, "not subscribed");
 
             var requestParams = request.ParamsAs<string[]>();
@@ -224,7 +230,7 @@ public class NexaPool : PoolBase
             // [Respect the goddamn standards Nicehack :(]
             var response = new JsonRpcResponse<object>(true, request.Id);
 
-            if(context.IsNicehash || poolConfig.EnableAsicBoost == true)
+            if (context.IsNicehash || poolConfig.EnableAsicBoost == true)
             {
                 response.Extra = new Dictionary<string, object>();
                 response.Extra["error"] = null;
@@ -241,7 +247,7 @@ public class NexaPool : PoolBase
             logger.Info(() => $"[{connection.ConnectionId}] Share accepted: D={Math.Round(share.Difficulty * coin.ShareMultiplier, 3)}");
 
             // update pool stats
-            if(share.IsBlockCandidate)
+            if (share.IsBlockCandidate)
                 poolStats.LastPoolBlockTime = clock.Now;
 
             // update client stats
@@ -250,7 +256,7 @@ public class NexaPool : PoolBase
             await UpdateVarDiffAsync(connection, false, ct);
         }
 
-        catch(StratumException ex)
+        catch (StratumException ex)
         {
             // telemetry
             PublishTelemetry(TelemetryCategory.Share, clock.Now - tsRequest.Timestamp.UtcDateTime, false);
@@ -276,7 +282,7 @@ public class NexaPool : PoolBase
         // [Respect the goddamn standards Nicehack :(]
         var response = new JsonRpcResponse<object>(true, request.Id);
 
-        if(context.IsNicehash || poolConfig.EnableAsicBoost == true)
+        if (context.IsNicehash || poolConfig.EnableAsicBoost == true)
         {
             response.Extra = new Dictionary<string, object>();
             response.Extra["error"] = null;
@@ -287,12 +293,12 @@ public class NexaPool : PoolBase
 
         try
         {
-            var requestedDiff = (double) Convert.ChangeType(request.Params, TypeCode.Double)!;
+            var requestedDiff = (double)Convert.ChangeType(request.Params, TypeCode.Double)!;
 
             // client may suggest higher-than-base difficulty, but not a lower one
             var poolEndpoint = poolConfig.Ports[connection.LocalEndpoint.Port];
 
-            if(requestedDiff > poolEndpoint.Difficulty)
+            if (requestedDiff > poolEndpoint.Difficulty)
             {
                 context.SetDifficulty(requestedDiff);
                 await connection.NotifyAsync(BitcoinStratumMethods.SetDifficulty, new object[] { context.Difficulty });
@@ -301,7 +307,7 @@ public class NexaPool : PoolBase
             }
         }
 
-        catch(Exception ex)
+        catch (Exception ex)
         {
             logger.Error(ex, () => $"Unable to convert suggested difficulty {request.Params}");
         }
@@ -311,18 +317,19 @@ public class NexaPool : PoolBase
     {
         currentJobParams = jobParams;
 
-        logger.Info(() => $"Broadcasting job {((object[]) jobParams)[0]}");
+        logger.Info(() => $"Broadcasting job {((object[])jobParams)[0]}");
 
         await Guard(() => ForEachMinerAsync(async (connection, ct) =>
         {
             var context = connection.ContextAs<NexaWorkerContext>();
-            var minerJobParams = CreateWorkerJob(connection, true);
 
-            // varDiff: if the client has a pending difficulty change, apply it now
-            if(context.ApplyPendingDifficulty())
+            // VarDiff pending: apply before sending new template
+            if (context.ApplyPendingDifficulty())
                 await connection.NotifyAsync(BitcoinStratumMethods.SetDifficulty, new object[] { context.Difficulty });
 
-            // send job
+            // New block template: HERE it makes sense clean = true
+            var minerJobParams = CreateWorkerJob(connection, true);
+
             await connection.NotifyAsync(BitcoinStratumMethods.MiningNotify, minerJobParams);
         }));
     }
@@ -332,7 +339,7 @@ public class NexaPool : PoolBase
         var multiplier = BitcoinConstants.Pow2x32;
         var result = shares * multiplier / interval;
 
-        if(coin.HashrateMultiplier.HasValue)
+        if (coin.HashrateMultiplier.HasValue)
             result *= coin.HashrateMultiplier.Value;
 
         return result;
@@ -358,7 +365,7 @@ public class NexaPool : PoolBase
 
         await manager.StartAsync(ct);
 
-        if(poolConfig.EnableInternalStratum == true)
+        if (poolConfig.EnableInternalStratum == true)
         {
             disposables.Add(manager.Jobs
                 .Select(job => Observable.FromAsync(() =>
@@ -400,7 +407,7 @@ public class NexaPool : PoolBase
 
         try
         {
-            switch(request.Method)
+            switch (request.Method)
             {
                 case BitcoinStratumMethods.Subscribe:
                     await OnSubscribeAsync(connection, tsRequest);
@@ -426,7 +433,7 @@ public class NexaPool : PoolBase
                     // [Respect the goddamn standards Nicehack :(]
                     var response = new JsonRpcResponse<object>(true, request.Id);
 
-                    if(context.IsNicehash || poolConfig.EnableAsicBoost == true)
+                    if (context.IsNicehash || poolConfig.EnableAsicBoost == true)
                     {
                         response.Extra = new Dictionary<string, object>();
                         response.Extra["error"] = null;
@@ -443,24 +450,27 @@ public class NexaPool : PoolBase
             }
         }
 
-        catch(StratumException ex)
+        catch (StratumException ex)
         {
             await connection.RespondErrorAsync(ex.Code, ex.Message, request.Id, false);
         }
     }
 
+
     protected override async Task OnVarDiffUpdateAsync(StratumConnection connection, double newDiff, CancellationToken ct)
     {
         await base.OnVarDiffUpdateAsync(connection, newDiff, ct);
 
-        if(connection.Context.ApplyPendingDifficulty())
+        if (connection.Context.ApplyPendingDifficulty())
         {
+            // VarDiff: do NOT clean the job (prevents discarding work in progress)
             var minerJobParams = CreateWorkerJob(connection, false);
 
             await connection.NotifyAsync(BitcoinStratumMethods.SetDifficulty, new object[] { connection.Context.Difficulty });
             await connection.NotifyAsync(BitcoinStratumMethods.MiningNotify, minerJobParams);
         }
     }
+
 
     #endregion // Overrides
 }

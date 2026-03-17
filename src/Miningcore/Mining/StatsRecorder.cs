@@ -1,3 +1,4 @@
+// src/Miningcore/Mining/StatsRecorder.cs
 using System.Collections.Concurrent;
 using System.Data;
 using System.Data.Common;

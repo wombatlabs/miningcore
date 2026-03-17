@@ -1,3 +1,4 @@
+// Equihash/EquihashBlockHeader.cs
 using Miningcore.Extensions;
 using NBitcoin;
 using NBitcoin.DataEncoders;
@@ -29,6 +30,9 @@ public class EquihashBlockHeader : IBitcoinSerializable
     private uint nTime;
     private int nVersion;
 
+    // Cache to avoid HexToByteArray() on every serialization
+    private byte[] nonceBytes = Array.Empty<byte>();
+
     // header
     private const int CURRENT_VERSION = 4;
 
@@ -53,7 +57,12 @@ public class EquihashBlockHeader : IBitcoinSerializable
     public string Nonce
     {
         get => nNonce;
-        set => nNonce = value;
+        set
+        {
+            nNonce = value;
+            // Cache parsed bytes once; avoids repeated HexToByteArray() on every ReadWrite()
+            nonceBytes = string.IsNullOrEmpty(nNonce) ? Array.Empty<byte>() : nNonce.HexToByteArray();
+        }
     }
 
     public uint256 HashMerkleRoot
@@ -86,15 +95,30 @@ public class EquihashBlockHeader : IBitcoinSerializable
 
     public void ReadWrite(BitcoinStream stream)
     {
-        var nonceBytes = nNonce.HexToByteArray();
-
+        // NOTE:
+        // - In this pool we primarily use this type for SERIALIZATION (building header bytes).
+        // - We keep a safe deserialization branch just in case.
         stream.ReadWrite(ref nVersion);
         stream.ReadWrite(ref hashPrevBlock);
         stream.ReadWrite(ref hashMerkleRoot);
         stream.ReadWrite(hashReserved);
         stream.ReadWrite(ref nTime);
         stream.ReadWrite(ref nBits);
-        stream.ReadWrite(nonceBytes);
+
+        if(stream.Serializing)
+        {
+            // Fast path: write cached nonce bytes (already parsed from hex)
+            stream.ReadWrite(nonceBytes);
+        }
+        else
+        {
+            // If ever deserialized from bytes, read a fixed-size nonce.
+            // Equihash (Zcash-family) uses 32-byte nonces. Adjust if a specific coin differs.
+            var tmp = new byte[32];
+            stream.ReadWrite(tmp);
+            nonceBytes = tmp;
+            nNonce = tmp.ToHexString();
+        }
     }
 
     #endregion
@@ -113,5 +137,6 @@ public class EquihashBlockHeader : IBitcoinSerializable
         nTime = 0;
         nBits = 0;
         nNonce = string.Empty;
+        nonceBytes = Array.Empty<byte>();
     }
 }

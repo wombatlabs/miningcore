@@ -1,63 +1,55 @@
-using System.Globalization;
+using System;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 
-namespace Miningcore.Blockchain.Progpow;
-
-public static class ProgpowUtils
+namespace Miningcore.Blockchain.Progpow
 {
-    public static string FiroEncodeTarget(double difficulty)
+    public static class ProgpowUtils
     {
-        difficulty = 1.0 / difficulty;
+        // We keep a fixed-point scale to avoid string/decimal conversions and reduce FP error.
+        // 10^12 is enough precision for stratum difficulty math.
+        private const ulong SCALE = 1_000_000_000_000UL;
+        private static readonly BigInteger BI_SCALE = new BigInteger((long) SCALE);
 
-        BigInteger NewTarget;
-        BigInteger DecimalDiff;
-        BigInteger DecimalTarget;
-
-        NewTarget = BigInteger.Multiply(FiroConstants.Diff1B, new BigInteger(difficulty));
-
-        string StringDiff = difficulty.ToString(CultureInfo.InvariantCulture);
-        int DecimalOffset = StringDiff.IndexOf(".");
-        if(DecimalOffset > -1)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static string EncodeTargetFixed(BigInteger diff1b, double difficulty)
         {
-            int Precision = (StringDiff.Length - 1) - DecimalOffset;
-            DecimalDiff = BigInteger.Parse(StringDiff.Substring(DecimalOffset + 1));
-            DecimalTarget = BigInteger.Multiply(FiroConstants.Diff1B, DecimalDiff);
+            // --- Protocol correctness guards ---
+            // Non-finite or non-positive difficulties are clamped to 1.0 (standard pool behavior).
+            if(!double.IsFinite(difficulty) || difficulty <= 0d)
+                difficulty = 1d;
 
-            string s = DecimalTarget.ToString();
-            s = s.Substring(0, s.Length - Precision);
+            // Convert difficulty to an integer fixed-point (scaled) using decimal to minimize rounding error.
+            // This avoids "1.0.ToString()" and sub-strings entirely.
+            decimal d = (decimal) difficulty;
 
-            DecimalTarget = BigInteger.Parse(s);
-            NewTarget += DecimalTarget;
+            // Avoid over/underflow on extreme values
+            if(d > (decimal) ulong.MaxValue / SCALE)
+                d = (decimal) ulong.MaxValue / SCALE;
+            else if(d < 1m / SCALE)
+                d = 1m / SCALE;
+
+            ulong diffScaled = (ulong) Math.Round(d * SCALE, MidpointRounding.AwayFromZero);
+            if(diffScaled == 0) diffScaled = 1;
+
+            // target = floor( (Diff1B * SCALE) / round(difficulty * SCALE) )
+            // This equals floor(Diff1B / difficulty) with fixed-point rounding.
+            BigInteger numerator = diff1b * BI_SCALE;
+            BigInteger t = BigInteger.Divide(numerator, new BigInteger((long) diffScaled));
+
+            // Clamp to sane protocol bounds: [1, Diff1B]
+            if(t.Sign <= 0) t = BigInteger.One;
+            else if(t > diff1b) t = diff1b;
+
+            // Return 256-bit hex (64 lowercase chars) as miners expect.
+            return string.Format("{0:x64}", t);
         }
 
-        return string.Format("{0:x64}", NewTarget);
-    }
-    
-    public static string RavencoinEncodeTarget(double difficulty)
-    {
-        difficulty = 1.0 / difficulty;
+        // Public helpers (drop-in replacements)
+        public static string FiroEncodeTarget(double difficulty) =>
+            EncodeTargetFixed(FiroConstants.Diff1B, difficulty);
 
-        BigInteger NewTarget;
-        BigInteger DecimalDiff;
-        BigInteger DecimalTarget;
-
-        NewTarget = BigInteger.Multiply(RavencoinConstants.Diff1B, new BigInteger(difficulty));
-
-        string StringDiff = difficulty.ToString(CultureInfo.InvariantCulture);
-        int DecimalOffset = StringDiff.IndexOf(".");
-        if(DecimalOffset > -1)
-        {
-            int Precision = (StringDiff.Length - 1) - DecimalOffset;
-            DecimalDiff = BigInteger.Parse(StringDiff.Substring(DecimalOffset + 1));
-            DecimalTarget = BigInteger.Multiply(RavencoinConstants.Diff1B, DecimalDiff);
-
-            string s = DecimalTarget.ToString();
-            s = s.Substring(0, s.Length - Precision);
-
-            DecimalTarget = BigInteger.Parse(s);
-            NewTarget += DecimalTarget;
-        }
-
-        return string.Format("{0:x64}", NewTarget);
+        public static string RavencoinEncodeTarget(double difficulty) =>
+            EncodeTargetFixed(RavencoinConstants.Diff1B, difficulty);
     }
 }

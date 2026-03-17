@@ -1,3 +1,4 @@
+// src/Miningcore/Persistence/Postgres/Repositories/StatsRepository.cs
 using System.Data;
 using AutoMapper;
 using Dapper;
@@ -21,6 +22,12 @@ public class StatsRepository : IStatsRepository
     private readonly IMasterClock clock;
     private static readonly TimeSpan MinerStatsMaxAge = TimeSpan.FromMinutes(20);
 
+    private sealed class MinerPendingRow
+    {
+        public string Miner { get; set; }
+        public double PendingShares { get; set; }
+    }
+
     public async Task InsertPoolStatsAsync(IDbConnection con, IDbTransaction tx, PoolStats stats, CancellationToken ct)
     {
         var mapped = mapper.Map<Entities.PoolStats>(stats);
@@ -37,7 +44,7 @@ public class StatsRepository : IStatsRepository
     {
         var mapped = mapper.Map<Entities.MinerWorkerPerformanceStats>(stats);
 
-        if(string.IsNullOrEmpty(mapped.Worker))
+        if (string.IsNullOrEmpty(mapped.Worker))
             mapped.Worker = string.Empty;
 
         const string query = @"INSERT INTO minerstats(poolid, miner, worker, hashrate, sharespersecond, created)
@@ -94,7 +101,7 @@ public class StatsRepository : IStatsRepository
 
         var result = await con.QuerySingleOrDefaultAsync<MinerStats>(new CommandDefinition(query, new { poolId, miner }, tx, cancellationToken: ct));
 
-        if(result != null)
+        if (result != null)
         {
             query = @"SELECT * FROM payments WHERE poolid = @poolId AND address = @miner
                 ORDER BY created DESC LIMIT 1";
@@ -108,10 +115,10 @@ public class StatsRepository : IStatsRepository
             var lastUpdate = await con.QuerySingleOrDefaultAsync<DateTime?>(new CommandDefinition(query, new { poolId, miner }, tx, cancellationToken: ct));
 
             // ignore stale minerstats
-            if(lastUpdate.HasValue && (clock.Now - DateTime.SpecifyKind(lastUpdate.Value, DateTimeKind.Utc) > MinerStatsMaxAge))
+            if (lastUpdate.HasValue && (clock.Now - DateTime.SpecifyKind(lastUpdate.Value, DateTimeKind.Utc) > MinerStatsMaxAge))
                 lastUpdate = null;
 
-            if(lastUpdate.HasValue)
+            if (lastUpdate.HasValue)
             {
                 // load rows rows by timestamp
                 query = @"SELECT * FROM minerstats WHERE poolid = @poolId AND miner = @miner AND created = @created";
@@ -121,12 +128,12 @@ public class StatsRepository : IStatsRepository
                     .Select(mapper.Map<MinerWorkerPerformanceStats>)
                     .ToArray();
 
-                if(stats.Any())
+                if (stats.Any())
                 {
                     // replace null worker with empty string
-                    foreach(var stat in stats)
+                    foreach (var stat in stats)
                     {
-                        if(stat.Worker == null)
+                        if (stat.Worker == null)
                         {
                             stat.Worker = string.Empty;
                             break;
@@ -177,7 +184,7 @@ public class StatsRepository : IStatsRepository
     public async Task<WorkerPerformanceStatsContainer[]> GetMinerPerformanceBetweenThreeMinutelyAsync(IDbConnection con, string poolId, string miner,
         DateTime start, DateTime end, CancellationToken ct)
     {
-         const string query = @"SELECT date_trunc('hour', created) AS created,
+        const string query = @"SELECT date_trunc('hour', created) AS created,
             (extract(minute FROM created)::int / 3) AS partition,
             worker, AVG(hashrate) AS hashrate, AVG(sharespersecond) AS sharespersecond
             FROM minerstats
@@ -189,7 +196,7 @@ public class StatsRepository : IStatsRepository
                 new { poolId, miner, start, end }, cancellationToken: ct)))
             .ToArray();
 
-        foreach(var entity in entities)
+        foreach (var entity in entities)
         {
             // ensure worker is not null
             entity.Worker ??= string.Empty;
@@ -230,7 +237,7 @@ public class StatsRepository : IStatsRepository
             .ToArray();
 
         // ensure worker is not null
-        foreach(var entity in entities)
+        foreach (var entity in entities)
             entity.Worker ??= string.Empty;
 
         // group
@@ -265,7 +272,7 @@ public class StatsRepository : IStatsRepository
             .ToArray();
 
         // ensure worker is not null
-        foreach(var entity in entities)
+        foreach (var entity in entities)
             entity.Worker ??= string.Empty;
 
         // group
@@ -286,7 +293,7 @@ public class StatsRepository : IStatsRepository
         return tmp;
     }
 
-    public async Task<WorkerPerformanceStatsContainer[]> GetMinerPerformanceBetweenDailyAsync(IDbConnection con,  string poolId, string miner,
+    public async Task<WorkerPerformanceStatsContainer[]> GetMinerPerformanceBetweenDailyAsync(IDbConnection con, string poolId, string miner,
         DateTime start, DateTime end, CancellationToken ct)
     {
         const string query = @"SELECT worker, date_trunc('day', created) AS created, AVG(hashrate) AS hashrate,
@@ -339,6 +346,59 @@ public class StatsRepository : IStatsRepository
                 new { poolId, from, offset = page * pageSize, pageSize }, cancellationToken: ct)))
             .Select(mapper.Map<MinerWorkerPerformanceStats>)
             .ToArray();
+    }
+
+    public async Task<IDictionary<string, MinerStats>> GetMinerStatsBulkAsync(
+       IDbConnection con,
+       string poolId,
+       IReadOnlyCollection<string> miners,
+       CancellationToken ct)
+    {
+        var result = new Dictionary<string, MinerStats>(StringComparer.OrdinalIgnoreCase);
+
+        // Fast path: nothing to do
+        if (miners == null || miners.Count == 0)
+            return result;
+
+        var distinct = miners
+            .Where(m => !string.IsNullOrWhiteSpace(m))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (distinct.Length == 0)
+            return result;
+
+        const string query = @"
+            SELECT miner AS Miner,
+                   SUM(difficulty) AS PendingShares
+            FROM shares
+            WHERE poolid = @poolId
+              AND miner = ANY(@miners)
+            GROUP BY miner;";
+
+        var cmd = new CommandDefinition(
+            query,
+            new { poolId, miners = distinct },
+            cancellationToken: ct);
+
+        var rows = await con.QueryAsync<MinerPendingRow>(cmd);
+
+        foreach (var row in rows)
+        {
+            if (string.IsNullOrWhiteSpace(row.Miner))
+                continue;
+
+            var stats = new MinerStats
+            {
+                PendingShares = row.PendingShares,
+                // Other fields (PendingBalance, TotalPaid, TodayPaid, etc.)
+                // are left as default for live endpoints.
+            };
+
+            result[row.Miner] = stats;
+        }
+
+        return result;
     }
 
     public Task<int> DeletePoolStatsBeforeAsync(IDbConnection con, DateTime date, CancellationToken ct)

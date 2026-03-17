@@ -1,3 +1,4 @@
+// src/Miningcore/Api/Responses/ResultResponse.cs
 namespace Miningcore.Api.Responses;
 
 public class ResultResponse<T>

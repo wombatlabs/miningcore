@@ -1,3 +1,4 @@
+
 namespace Miningcore.Api.WebSocketNotifications;
 
 public enum WsNotificationType

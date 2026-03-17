@@ -66,7 +66,7 @@ public class EquihashPool : PoolBase
         {
             case "VRSC":
                 return ctx.Resolve<EquihashJobManager>(new TypedParameter(typeof(IExtraNonceProvider), new VeruscoinExtraNonceProvider(poolConfig.Id, clusterConfig.InstanceId)));
-            
+
             default:
                 return ctx.Resolve<EquihashJobManager>(new TypedParameter(typeof(IExtraNonceProvider), new EquihashExtraNonceProvider(poolConfig.Id, clusterConfig.InstanceId)));
         }
@@ -84,8 +84,8 @@ public class EquihashPool : PoolBase
         {
             disposables.Add(manager.Jobs
                 .Select(job => Observable.FromAsync(() =>
-                    Guard(()=> OnNewJobAsync(job),
-                        ex=> logger.Debug(() => $"{nameof(OnNewJobAsync)}: {ex.Message}"))))
+                    Guard(() => OnNewJobAsync(job),
+                        ex => logger.Debug(() => $"{nameof(OnNewJobAsync)}: {ex.Message}"))))
                 .Concat()
                 .Subscribe(_ => { }, ex =>
                 {
@@ -123,18 +123,17 @@ public class EquihashPool : PoolBase
         var requestParams = request.ParamsAs<string[]>();
         context.UserAgent = requestParams.FirstOrDefault()?.Trim();
 
-        var data = new object[]
+        // Build proper Zcash-style subscription response
+        var responseData = new object[]
         {
-            connection.ConnectionId,
-        }
-        .Concat(manager.GetSubscriberData(connection))
-        .ToArray();
+        new object[] { "mining.set_target", "mining.notify" }, // methods announced
+        manager.GetSubscriberData(connection)[0],             // extranonce1
+        4                                                     // extranonce2_size (common for Equihash 144,5)
+        };
 
-        // Nicehash's stupid validator insists on "error" property present
-        // in successful responses which is a violation of the JSON-RPC spec
-        // [We miss you Oliver <3 We miss you so much <3 Respect the goddamn standards Nicehash :(]
-        var response = new JsonRpcResponse<object[]>(data, request.Id);
+        var response = new JsonRpcResponse<object[]>(responseData, request.Id);
 
+        // Nicehash compatibility quirk
         if(context.IsNicehash || poolConfig.EnableAsicBoost == true)
         {
             response.Extra = new Dictionary<string, object>();
@@ -143,9 +142,18 @@ public class EquihashPool : PoolBase
 
         await connection.RespondAsync(response);
 
-        // setup worker context
+        // mark context subscribed
         context.IsSubscribed = true;
+
+        // optional: send initial difficulty and job immediately
+        await connection.NotifyAsync(EquihashStratumMethods.SetTarget, new object[] { EncodeTarget(context.Difficulty) });
+
+        var minerJobParams = CreateWorkerJob(connection, cleanJob: true);
+        await connection.NotifyAsync(BitcoinStratumMethods.MiningNotify, minerJobParams);
+
+        logger.Info(() => $"[{connection.ConnectionId}] Subscribed (Zcash-style)");
     }
+
 
     protected async Task OnAuthorizeAsync(StratumConnection connection, Timestamped<JsonRpcRequest> tsRequest, CancellationToken ct)
     {
@@ -182,7 +190,7 @@ public class EquihashPool : PoolBase
                 response.Extra = new Dictionary<string, object>();
                 response.Extra["error"] = null;
             }
-            
+
             // respond
             await connection.RespondAsync(response);
 
@@ -290,7 +298,7 @@ public class EquihashPool : PoolBase
 
             // submit
             var share = await manager.SubmitShareAsync(connection, requestParams, ct);
-            
+
             // Nicehash's stupid validator insists on "error" property present
             // in successful responses which is a violation of the JSON-RPC spec
             // [We miss you Oliver <3 We miss you so much <3 Respect the goddamn standards Nicehash :(]
@@ -301,7 +309,7 @@ public class EquihashPool : PoolBase
                 response.Extra = new Dictionary<string, object>();
                 response.Extra["error"] = null;
             }
-            
+
             await connection.RespondAsync(response);
 
             // publish
@@ -456,7 +464,7 @@ public class EquihashPool : PoolBase
     {
         var multiplier = BitcoinConstants.Pow2x32;
         var result = shares * multiplier / interval / 1000000 * 2;
-        
+
         result /= hashrateDivisor;
         return result;
     }
@@ -473,16 +481,18 @@ public class EquihashPool : PoolBase
             switch(coin.Symbol)
             {
                 case "VRSC":
-
                     cleanJob = (bool) ((object[]) currentJobParams)[^2];
                     break;
                 default:
-
                     cleanJob = (bool) ((object[]) currentJobParams)[^1];
                     break;
             }
             if(cleanJob)
                 cleanJob = !cleanJob;
+
+            // IMPORTANT: for vardiff updates, do not clean previous jobs
+            if(cleanJob)
+                cleanJob = !cleanJob;   // i.e., force false if it was true
 
             var minerJobParams = CreateWorkerJob(connection, cleanJob);
 

@@ -41,14 +41,14 @@ public class ProgpowPool : PoolBase
     private long currentJobId;
     private ProgpowJobManager manager;
     private ProgpowCoinTemplate coin;
-    
+
     private string createEncodeTarget(double difficulty)
     {
         switch(coin.Symbol)
         {
             case "FIRO":
                 return ProgpowUtils.FiroEncodeTarget(difficulty);
-            
+
             default:
                 return ProgpowUtils.RavencoinEncodeTarget(difficulty);
         }
@@ -57,7 +57,6 @@ public class ProgpowPool : PoolBase
     protected virtual async Task OnSubscribeAsync(StratumConnection connection, Timestamped<JsonRpcRequest> tsRequest)
     {
         var request = tsRequest.Value;
-
         if(request.Id == null)
             throw new StratumException(StratumError.MinusOne, "missing request id");
 
@@ -66,20 +65,17 @@ public class ProgpowPool : PoolBase
 
         var data = new object[]
         {
-            new object[]
-            {
-                new object[] { ProgpowStratumMethods.SetDifficulty, connection.ConnectionId },
-                new object[] { ProgpowStratumMethods.MiningNotify, connection.ConnectionId }
-            }
+        new object[]
+        {
+            new object[] { ProgpowStratumMethods.SetDifficulty, connection.ConnectionId },
+            new object[] { ProgpowStratumMethods.MiningNotify, connection.ConnectionId }
+        }
         }
         .Concat(manager.GetSubscriberData(connection))
         .ToArray();
 
-        // Nicehash's stupid validator insists on "error" property present
-        // in successful responses which is a violation of the JSON-RPC spec
-        // [Respect the goddamn standards Nicehack :(]
+        // Nicehash compat
         var response = new JsonRpcResponse<object[]>(data, request.Id);
-
         if(context.IsNicehash || poolConfig.EnableAsicBoost == true)
         {
             response.Extra = new Dictionary<string, object>();
@@ -92,22 +88,26 @@ public class ProgpowPool : PoolBase
         context.IsSubscribed = true;
         context.UserAgent = requestParams.FirstOrDefault()?.Trim();
 
-        // Nicehash support
+        // Nicehash static diff
         var nicehashDiff = await GetNicehashStaticMinDiff(context, coin.Name, coin.GetAlgorithmName());
-
         if(nicehashDiff.HasValue)
         {
             logger.Info(() => $"[{connection.ConnectionId}] Nicehash detected. Using API supplied difficulty of {nicehashDiff.Value}");
-
             context.VarDiff = null; // disable vardiff
             context.SetDifficulty(nicehashDiff.Value);
         }
 
-        var minerJobParams = CreateWorkerJob(connection, currentJobParams.CleanJobs);
-        // send intial update
-        await connection.NotifyAsync(ProgpowStratumMethods.SetDifficulty, new object[] { createEncodeTarget(context.Difficulty) });
+        // First job (do not assume CleanJobs if no job yet)
+        var clean = currentJobParams?.CleanJobs ?? false;
+        var minerJobParams = CreateWorkerJob(connection, clean);
+
+        // send initial updates using encoded-target cache
+        await connection.NotifyAsync(ProgpowStratumMethods.SetDifficulty,
+            new object[] { context.GetOrUpdateEncodedTarget(createEncodeTarget) });
+
         await connection.NotifyAsync(ProgpowStratumMethods.MiningNotify, minerJobParams);
     }
+
 
     protected virtual async Task OnAuthorizeAsync(StratumConnection connection, Timestamped<JsonRpcRequest> tsRequest, CancellationToken ct)
     {
@@ -156,15 +156,16 @@ public class ProgpowPool : PoolBase
 
             // Static diff
             if(staticDiff.HasValue &&
-               (context.VarDiff != null && staticDiff.Value >= context.VarDiff.Config.MinDiff ||
-                   context.VarDiff == null && staticDiff.Value > context.Difficulty))
+                (context.VarDiff != null && staticDiff.Value >= context.VarDiff.Config.MinDiff ||
+                    context.VarDiff == null && staticDiff.Value > context.Difficulty))
             {
                 context.VarDiff = null; // disable vardiff
                 context.SetDifficulty(staticDiff.Value);
 
                 logger.Info(() => $"[{connection.ConnectionId}] Setting static difficulty of {staticDiff.Value}");
 
-                await connection.NotifyAsync(ProgpowStratumMethods.SetDifficulty, new object[] { createEncodeTarget(context.Difficulty) });
+                await connection.NotifyAsync(ProgpowStratumMethods.SetDifficulty,
+                    new object[] { context.GetOrUpdateEncodedTarget(createEncodeTarget) });
             }
         }
 
@@ -193,16 +194,15 @@ public class ProgpowPool : PoolBase
 
         var result = new object[]
         {
-             job.Id,
-             headerHash,
-             job.SeedHash,
-             createEncodeTarget(context.Difficulty),
-             update,
-             job.Height,
-             job.Bits
+        job.Id,
+        headerHash,
+        job.SeedHash,
+        context.GetOrUpdateEncodedTarget(createEncodeTarget),
+        update,    // miner should abort prev work if true
+        job.Height,
+        job.Bits
         };
 
-        // update context
         lock(context)
         {
             context.AddJob(job, manager.maxActiveJobs);
@@ -306,15 +306,18 @@ public class ProgpowPool : PoolBase
         {
             var context = connection.ContextAs<ProgpowWorkerContext>();
 
-            var minerJobParams = CreateWorkerJob(connection, currentJobParams.CleanJobs);
+            // For new templates, use CleanJobs from JobManager
+            var clean = currentJobParams?.CleanJobs ?? true; // in new block, it's reasonable to clean
+            var minerJobParams = CreateWorkerJob(connection, clean);
 
+            // VarDiff pending: apply before sending
             if(context.ApplyPendingDifficulty())
                 await connection.NotifyAsync(ProgpowStratumMethods.SetDifficulty, new object[] { createEncodeTarget(context.Difficulty) });
 
-            // send job
             await connection.NotifyAsync(ProgpowStratumMethods.MiningNotify, minerJobParams);
         }));
     }
+
 
     public override double HashrateFromShares(double shares, double interval)
     {
@@ -328,18 +331,25 @@ public class ProgpowPool : PoolBase
     }
 
     public override double ShareMultiplier => coin.ShareMultiplier;
-    
+
     private ProgpowJobManager createProgpowExtraNonceProvider()
     {
         switch(coin.Symbol)
         {
             case "FIRO":
-                return ctx.Resolve<ProgpowJobManager>(new TypedParameter(typeof(IExtraNonceProvider), new FiroExtraNonceProvider(poolConfig.Id, clusterConfig.InstanceId)));
-            
+                return ctx.Resolve<ProgpowJobManager>(
+                    new TypedParameter(typeof(IExtraNonceProvider),
+                        new FiroExtraNonceProvider(poolConfig.Id, clusterConfig.InstanceId)));
+
             default:
-                return ctx.Resolve<ProgpowJobManager>(new TypedParameter(typeof(IExtraNonceProvider), new RavencoinExtraNonceProvider(poolConfig.Id, clusterConfig.InstanceId)));
+                // Default is KawPoW-family extranonce provider
+                return ctx.Resolve<ProgpowJobManager>(
+                    new TypedParameter(typeof(IExtraNonceProvider),
+                        new Miningcore.Blockchain.Progpow.Kawpow
+.KawpowExtraNonceProvider(poolConfig.Id, clusterConfig.InstanceId)));
         }
     }
+
 
     #region Overrides
 
@@ -349,7 +359,7 @@ public class ProgpowPool : PoolBase
 
         base.Configure(pc, cc);
     }
-    
+
     protected override async Task SetupJobManager(CancellationToken ct)
     {
         manager = createProgpowExtraNonceProvider();
@@ -373,13 +383,13 @@ public class ProgpowPool : PoolBase
             // start with initial blocktemplate
             await manager.Jobs.Take(1).ToTask(ct);
         }
-
         else
         {
             // keep updating NetworkStats
             disposables.Add(manager.Jobs.Subscribe());
         }
     }
+
 
     protected override async Task InitStatsAsync(CancellationToken ct)
     {
@@ -409,7 +419,7 @@ public class ProgpowPool : PoolBase
                 case ProgpowStratumMethods.Authorize:
                     await OnAuthorizeAsync(connection, tsRequest, ct);
                     break;
-                
+
                 case ProgpowStratumMethods.SubmitShare:
                     await OnSubmitAsync(connection, tsRequest, ct);
                     break;
@@ -417,7 +427,7 @@ public class ProgpowPool : PoolBase
                 case BitcoinStratumMethods.MiningMultiVersion:
                     // ignored
                     break;
-                
+
                 case BitcoinStratumMethods.ExtraNonceSubscribe:
                 case BitcoinStratumMethods.GetTransactions:
                 case ProgpowStratumMethods.SubmitHashrate:
@@ -425,7 +435,7 @@ public class ProgpowPool : PoolBase
 
                     await connection.RespondErrorAsync(StratumError.Other, $"Unsupported request {request.Method}", request.Id);
                     break;
-                
+
                 default:
                     logger.Debug(() => $"[{connection.ConnectionId}] Unknown RPC request: {JsonConvert.SerializeObject(request, serializerSettings)}");
 
@@ -446,13 +456,16 @@ public class ProgpowPool : PoolBase
 
         if(connection.Context.ApplyPendingDifficulty())
         {
-            bool cleanJob = (currentJobParams.CleanJobs) ? !currentJobParams.CleanJobs : currentJobParams.CleanJobs;
-
+            const bool cleanJob = false; // never clean on VarDiff retarget
             var minerJobParams = CreateWorkerJob(connection, cleanJob);
-            await connection.NotifyAsync(ProgpowStratumMethods.SetDifficulty, new object[] { createEncodeTarget(connection.Context.Difficulty) });
+
+            await connection.NotifyAsync(ProgpowStratumMethods.SetDifficulty,
+                new object[] { connection.ContextAs<ProgpowWorkerContext>().GetOrUpdateEncodedTarget(createEncodeTarget) });
+
             await connection.NotifyAsync(ProgpowStratumMethods.MiningNotify, minerJobParams);
         }
     }
+
 
     #endregion // Overrides
 }

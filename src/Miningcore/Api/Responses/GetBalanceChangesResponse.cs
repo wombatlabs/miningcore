@@ -1,3 +1,4 @@
+// src/Miningcore/Api/Responses/GetBalanceChangesResponse.cs
 namespace Miningcore.Api.Responses;
 
 public class BalanceChange

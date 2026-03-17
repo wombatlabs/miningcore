@@ -7,18 +7,23 @@ using Miningcore.Stratum;
 using Miningcore.Util;
 using NBitcoin;
 
-namespace Miningcore.Blockchain.Kaspa.Custom.Karlsencoin;
-
-public class KarlsencoinJob : KaspaJob
+namespace Miningcore.Blockchain.Kaspa.Custom.Karlsencoin
 {
-    public KarlsencoinJob(IHashAlgorithm customBlockHeaderHasher, IHashAlgorithm customCoinbaseHasher, IHashAlgorithm customShareHasher) : base(customBlockHeaderHasher, customCoinbaseHasher, customShareHasher)
+    public class KarlsencoinJob : KaspaJob
     {
-    }
-
-    protected override void SerializeCoinbase(ReadOnlySpan<byte> prePowHash, long timestamp, ulong nonce, Span<byte> result)
-    {
-        using(var stream = new MemoryStream())
+        public KarlsencoinJob(IHashAlgorithm customBlockHeaderHasher, IHashAlgorithm customCoinbaseHasher, IHashAlgorithm customShareHasher)
+            : base(customBlockHeaderHasher, customCoinbaseHasher, customShareHasher)
         {
+        }
+
+        /// <summary>
+        /// Coinbase format for Karlsencoin:
+        /// prePowHash || timestamp(uint64) || 32 zero bytes padding || nonce(uint64).
+        /// If share hasher is FishHashKarlsen we skip hashing the coinbase (raw is used).
+        /// </summary>
+        protected override void SerializeCoinbase(ReadOnlySpan<byte> prePowHash, long timestamp, ulong nonce, Span<byte> result)
+        {
+            using var stream = new MemoryStream();
             stream.Write(prePowHash);
             stream.Write(BitConverter.GetBytes((ulong) timestamp));
             stream.Write(new byte[32]); // 32 zero bytes padding
@@ -31,79 +36,79 @@ public class KarlsencoinJob : KaspaJob
             else
                 streamBytes.CopyTo(result);
         }
-    }
 
-    protected override Share ProcessShareInternal(StratumConnection worker, string nonce)
-    {
-        var context = worker.ContextAs<KaspaWorkerContext>();
-
-        BlockTemplate.Header.Nonce = Convert.ToUInt64(nonce, 16);
-
-        Span<byte> coinbaseBytes = stackalloc byte[(shareHasher is not FishHashKarlsen) ? 32 : KarlsencoinConstants.CoinbaseSize];
-        SerializeCoinbase(prePowHashBytes, BlockTemplate.Header.Timestamp, BlockTemplate.Header.Nonce, coinbaseBytes);
-
-        Span<byte> hashCoinbaseBytes = stackalloc byte[32];
-
-        if(shareHasher is not FishHashKarlsen)
+        /// <summary>
+        /// Validates share, computes difficulty, block-candidate and fills Share.
+        /// </summary>
+        protected override Share ProcessShareInternal(StratumConnection worker, string nonce)
         {
-            Span<byte> matrixBytes = stackalloc byte[32];
-            ComputeCoinbase(prePowHashBytes, coinbaseBytes, matrixBytes);
+            var context = worker.ContextAs<KaspaWorkerContext>();
+            BlockTemplate.Header.Nonce = Convert.ToUInt64(nonce, 16);
 
-            shareHasher.Digest(matrixBytes, hashCoinbaseBytes);
-        }
-        else
-            shareHasher.Digest(coinbaseBytes, hashCoinbaseBytes);
+            // Build coinbase buffer (size depends on hasher type)
+            Span<byte> coinbaseBuf = stackalloc byte[(shareHasher is not FishHashKarlsen) ? 32 : KarlsencoinConstants.CoinbaseSize];
+            SerializeCoinbase(prePowHashBytes, BlockTemplate.Header.Timestamp, BlockTemplate.Header.Nonce, coinbaseBuf);
 
-        var targetHashCoinbaseBytes = new Target(new BigInteger(hashCoinbaseBytes.ToNewReverseArray(), true, true));
-        var hashCoinbaseBytesValue = targetHashCoinbaseBytes.ToUInt256();
-        //throw new StratumException(StratumError.LowDifficultyShare, $"nonce: {nonce} ||| hashCoinbaseBytes: {hashCoinbaseBytes.ToHexString()} ||| BigInteger: {targetHashCoinbaseBytes.ToBigInteger()} ||| Target: {hashCoinbaseBytesValue} - [stratum: {KaspaUtils.DifficultyToTarget(context.Difficulty)} - blockTemplate: {blockTargetValue}] ||| BigToCompact: {KaspaUtils.BigToCompact(targetHashCoinbaseBytes.ToBigInteger())} - [stratum: {KaspaUtils.BigToCompact(KaspaUtils.DifficultyToTarget(context.Difficulty))} - blockTemplate: {BlockTemplate.Header.Bits}] ||| shareDiff: {(double) new BigRational(KaspaConstants.Diff1b, targetHashCoinbaseBytes.ToBigInteger()) * shareMultiplier} - [stratum: {context.Difficulty} - blockTemplate: {KaspaUtils.TargetToDifficulty(KaspaUtils.CompactToBig(BlockTemplate.Header.Bits)) * (double) KaspaConstants.MinHash}]");
-
-        // calc share-diff
-        var shareDiff = (double) new BigRational(KaspaConstants.Diff1b, targetHashCoinbaseBytes.ToBigInteger()) * shareMultiplier;
-
-        // diff check
-        var stratumDifficulty = context.Difficulty;
-        var ratio = shareDiff / stratumDifficulty;
-
-        // check if the share meets the much harder block difficulty (block candidate)
-        var isBlockCandidate = hashCoinbaseBytesValue <= blockTargetValue;
-        //var isBlockCandidate = true;
-
-        // test if share meets at least workers current difficulty
-        if(!isBlockCandidate && ratio < 0.99)
-        {
-            // check if share matched the previous difficulty from before a vardiff retarget
-            if(context.VarDiff?.LastUpdate != null && context.PreviousDifficulty.HasValue)
+            // Hash share
+            Span<byte> shareHash32 = stackalloc byte[32];
+            if(shareHasher is not FishHashKarlsen)
             {
-                ratio = shareDiff / context.PreviousDifficulty.Value;
-
-                if(ratio < 0.99)
-                    throw new StratumException(StratumError.LowDifficultyShare, $"low difficulty share ({shareDiff})");
-
-                // use previous difficulty
-                stratumDifficulty = context.PreviousDifficulty.Value;
+                Span<byte> mixed32 = stackalloc byte[32];
+                ComputeCoinbase(prePowHashBytes, coinbaseBuf, mixed32);
+                shareHasher.Digest(mixed32, shareHash32);
+            }
+            else
+            {
+                shareHasher.Digest(coinbaseBuf, shareHash32);
             }
 
-            else
-                throw new StratumException(StratumError.LowDifficultyShare, $"low difficulty share ({shareDiff})");
+            // Convert hash to target/value
+            var targetShare = new Target(new BigInteger(shareHash32.ToNewReverseArray(), true, true));
+            var shareValue = targetShare.ToUInt256();
+
+            // Difficulty calc (Diff1, not Diff1b). KarlsencoinConstants.Diff1 does NOT exist; use KaspaConstants.Diff1.
+            var shareDiff = (double) new BigRational(KaspaConstants.Diff1Target, targetShare.ToBigInteger()) * shareMultiplier;
+
+            // Start with current diff; may fallback to previous if vardiff just changed.
+            var stratumDifficulty = context.Difficulty;
+            var ratio = shareDiff / stratumDifficulty;
+
+            var isBlockCandidate = shareValue <= blockTargetValue;
+
+            if(!isBlockCandidate && ratio < 0.99)
+            {
+                // Allow the previous difficulty shortly after a vardiff retarget
+                if(context.VarDiff?.LastUpdate != null && context.PreviousDifficulty.HasValue)
+                {
+                    ratio = shareDiff / context.PreviousDifficulty.Value;
+                    if(ratio < 0.99)
+                        throw new StratumException(StratumError.LowDifficultyShare, $"low difficulty share ({shareDiff})");
+
+                    // Use previous difficulty for the accepted share
+                    stratumDifficulty = context.PreviousDifficulty.Value;
+                }
+                else
+                {
+                    throw new StratumException(StratumError.LowDifficultyShare, $"low difficulty share ({shareDiff})");
+                }
+            }
+
+            var result = new Share
+            {
+                BlockHeight = (long) BlockTemplate.Header.DaaScore,
+                NetworkDifficulty = Difficulty,
+                // Report the difficulty actually used to validate this share
+                Difficulty = stratumDifficulty / shareMultiplier
+            };
+
+            if(isBlockCandidate)
+            {
+                result.IsBlockCandidate = true;
+                result.BlockHash = shareValue.ToString();
+                result.TransactionConfirmationData = shareHash32.ToHexString();
+            }
+
+            return result;
         }
-
-        var result = new Share
-        {
-            BlockHeight = (long) BlockTemplate.Header.DaaScore,
-            NetworkDifficulty = Difficulty,
-            Difficulty = context.Difficulty / shareMultiplier
-        };
-
-        if(isBlockCandidate)
-        {
-            Span<byte> hashBytes = stackalloc byte[32];
-            SerializeHeader(BlockTemplate.Header, hashBytes, false);
-
-            result.IsBlockCandidate = true;
-            result.BlockHash = hashBytes.ToHexString();
-        }
-
-        return result;
     }
 }

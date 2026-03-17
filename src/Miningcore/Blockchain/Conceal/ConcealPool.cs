@@ -53,11 +53,10 @@ public class ConcealPool : PoolBase
             throw new StratumException(StratumError.MinusOne, "missing request id");
 
         var loginRequest = request.ParamsAs<ConcealLoginRequest>();
-
         if(string.IsNullOrEmpty(loginRequest?.Login))
             throw new StratumException(StratumError.MinusOne, "missing login");
 
-        // extract worker/miner/paymentid
+        // miner.worker
         var split = loginRequest.Login.Split('.');
         context.Miner = split[0].Trim();
         context.Worker = split.Length > 1 ? split[1].Trim() : null;
@@ -65,101 +64,67 @@ public class ConcealPool : PoolBase
 
         var addressToValidate = context.Miner;
 
-        // extract paymentid
+        // payment id after '#'
         var index = context.Miner.IndexOf('#');
         if(index != -1)
         {
-            var paymentId = context.Miner[(index + 1)..].Trim();
+            var paymentId = context.Miner.Substring(index + 1).Trim();
 
-            // validate
             if(!string.IsNullOrEmpty(paymentId) && paymentId.Length != ConcealConstants.PaymentIdHexLength)
                 throw new StratumException(StratumError.MinusOne, "invalid payment id");
 
-            // re-append to address
-            addressToValidate = context.Miner[..index].Trim();
+            addressToValidate = context.Miner.Substring(0, index).Trim();
             context.Miner = addressToValidate + PayoutConstants.PayoutInfoSeperator + paymentId;
         }
 
-        // validate login
-        var result = manager.ValidateAddress(addressToValidate);
-
-        context.IsSubscribed = result;
-        context.IsAuthorized = result;
+        // validates Adress
+        var isValid = manager.ValidateAddress(addressToValidate);
+        context.IsSubscribed = isValid;
+        context.IsAuthorized = isValid;
 
         if(context.IsAuthorized)
         {
-            // extract control vars from password
+            // controls diff via password
             var passParts = loginRequest.Password?.Split(PasswordControlVarsSeparator);
             var staticDiff = GetStaticDiffFromPassparts(passParts);
 
-            // Nicehash support
-            var nicehashDiff = await GetNicehashStaticMinDiff(context, manager.Coin.Name, manager.Coin.GetAlgorithmName());
-
+            // Nicehash
+            var nicehashDiff = await GetNicehashStaticMinDiff(context, addressToValidate, minerAlgo);
             if(nicehashDiff.HasValue)
-            {
-                if(!staticDiff.HasValue || nicehashDiff > staticDiff)
-                {
-                    logger.Info(() => $"[{connection.ConnectionId}] Nicehash detected. Using API supplied difficulty of {nicehashDiff.Value}");
+                staticDiff = Math.Max(staticDiff ?? 0, nicehashDiff.Value);
 
-                    staticDiff = nicehashDiff;
-                }
-
-                else
-                    logger.Info(() => $"[{connection.ConnectionId}] Nicehash detected. Using miner supplied difficulty of {staticDiff.Value}");
-            }
-
-            // Static diff
-            if(staticDiff.HasValue &&
-               (context.VarDiff != null && staticDiff.Value >= context.VarDiff.Config.MinDiff ||
-                   context.VarDiff == null && staticDiff.Value > context.Difficulty))
-            {
-                context.VarDiff = null; // disable vardiff
-                context.SetDifficulty(staticDiff.Value);
-
-                logger.Info(() => $"[{connection.ConnectionId}] Static difficulty set to {staticDiff.Value}");
-            }
-
-            // respond
-            var loginResponse = new ConcealLoginResponse
-            {
-                Id = connection.ConnectionId,
-                Job = CreateWorkerJob(connection)
-            };
-
-            // Nicehash's stupid validator insists on "error" property present
-            // in successful responses which is a violation of the JSON-RPC spec
-            // [Respect the goddamn standards Nicehack :(]
-            var response = new JsonRpcResponse<object>(loginResponse, request.Id);
-
-            if(context.IsNicehash || poolConfig.EnableAsicBoost == true)
-            {
-                response.Extra = new Dictionary<string, object>();
-                response.Extra["error"] = null;
-            }
-
-            await connection.RespondAsync(response);
-
-            // log association
-            if(!string.IsNullOrEmpty(context.Worker))
-                logger.Info(() => $"[{connection.ConnectionId}] Authorized worker {context.Worker}@{context.Miner}");
-            else
-                logger.Info(() => $"[{connection.ConnectionId}] Authorized miner {context.Miner}");
+            if(staticDiff.HasValue && staticDiff.Value > 0)
+                context.VarDiff = null; // fixa diff
         }
 
-        else
-        {
-            await connection.RespondErrorAsync(StratumError.MinusOne, "invalid login", request.Id);
-
-            if(clusterConfig?.Banning?.BanOnLoginFailure is null or true)
-            {
-                logger.Info(() => $"[{connection.ConnectionId}] Banning unauthorized worker {context.Miner} for {loginFailureBanTimeout.TotalSeconds} sec");
-
-                banManager.Ban(connection.RemoteEndpoint.Address, loginFailureBanTimeout);
-
-                Disconnect(connection);
-            }
-        }
+        await SendLoginResponseAsync(connection, context, request.Id);
     }
+
+    // Sends the login ack expected by miners (id + initial job), Nicehash-safe
+    private async Task SendLoginResponseAsync(StratumConnection connection, ConcealWorkerContext context, object requestId)
+    {
+        // build initial job for this worker
+        var job = CreateWorkerJob(connection);
+
+        // minimal result shape most miners accept: { id, job, status }
+        var result = new
+        {
+            id = connection.ConnectionId,
+            job,
+            status = "OK"
+        };
+
+        var response = new JsonRpcResponse<object>(result, requestId);
+
+        if(context.IsNicehash || poolConfig.EnableAsicBoost == true)
+        {
+            response.Extra = new Dictionary<string, object>();
+            response.Extra["error"] = null;
+        }
+
+        await connection.RespondAsync(response);
+    }
+
 
     private async Task OnGetJobAsync(StratumConnection connection, Timestamped<JsonRpcRequest> tsRequest)
     {
@@ -197,11 +162,27 @@ public class ConcealPool : PoolBase
         var context = connection.ContextAs<ConcealWorkerContext>();
         var job = new ConcealWorkerJob(NextJobId(), context.Difficulty);
 
-        manager.PrepareWorkerJob(job, out var blob, out var target);
+        string blob = null;
+        string target = null;
 
-        // should never happen
-        if(string.IsNullOrEmpty(blob) || string.IsNullOrEmpty(target))
+        try
+        {
+            // Prepare miner-specific job data (blob + target)
+            manager.PrepareWorkerJob(job, out blob, out target);
+        }
+        catch(Exception ex)
+        {
+            logger.Error(ex, $"[{connection.ConnectionId}] Failed to prepare Conceal worker job");
             return null;
+        }
+
+
+        // Should never happen, but do not send partial jobs
+        if(string.IsNullOrEmpty(blob) || string.IsNullOrEmpty(target))
+        {
+            logger.Warn(() => $"[{connection.ConnectionId}] Ignoring empty Conceal job (blob/target missing)");
+            return null;
+        }
 
         var result = new ConcealJobParams
         {
@@ -211,10 +192,11 @@ public class ConcealPool : PoolBase
             Height = job.Height
         };
 
+        // Optional algo hint to miner (when available)
         if(!string.IsNullOrEmpty(minerAlgo))
             result.Algorithm = minerAlgo;
 
-        // update context
+        // Update worker context with a small rolling window of recent jobs
         lock(context)
         {
             context.AddJob(job, 4);
@@ -222,6 +204,7 @@ public class ConcealPool : PoolBase
 
         return result;
     }
+
 
     private async Task OnSubmitAsync(StratumConnection connection, Timestamped<JsonRpcRequest> tsRequest, CancellationToken ct)
     {
@@ -331,8 +314,16 @@ public class ConcealPool : PoolBase
 
         await Guard(() => ForEachMinerAsync(async (connection, ct) =>
         {
-            // send job
+            // Build a fresh job for each connection
             var job = CreateWorkerJob(connection);
+
+            // Defensive: skip if job could not be prepared
+            if(job == null)
+            {
+                logger.Warn(() => $"[{connection.ConnectionId}] Skipped job notify (job is null)");
+                return;
+            }
+
             await connection.NotifyAsync(ConcealStratumMethods.JobNotify, job);
         }));
     }
@@ -353,7 +344,7 @@ public class ConcealPool : PoolBase
             disposables.Add(manager.Blocks
                 .Select(_ => Observable.FromAsync(() =>
                     Guard(OnNewJobAsync,
-                        ex=> logger.Debug(() => $"{nameof(OnNewJobAsync)}: {ex.Message}"))))
+                        ex => logger.Debug(() => $"{nameof(OnNewJobAsync)}: {ex.Message}"))))
                 .Concat()
                 .Subscribe(_ => { }, ex =>
                 {
@@ -377,7 +368,7 @@ public class ConcealPool : PoolBase
         {
             case CryptonightHashType.CryptonightCCX:
                 return $"cn-ccx";
-            
+
             case CryptonightHashType.CryptonightGPU:
                 return $"cn-gpu";
         }
@@ -467,13 +458,17 @@ public class ConcealPool : PoolBase
     {
         await base.OnVarDiffUpdateAsync(connection, newDiff, ct);
 
+        // Only push a new job if the pending difficulty was actually applied
         if(connection.Context.ApplyPendingDifficulty())
         {
-            // re-send job
             var job = CreateWorkerJob(connection);
-            await connection.NotifyAsync(ConcealStratumMethods.JobNotify, job);
+            if(job != null)
+                await connection.NotifyAsync(ConcealStratumMethods.JobNotify, job);
+            else
+                logger.Warn(() => $"[{connection.ConnectionId}] VarDiff applied but job preparation failed");
         }
     }
+
 
     #endregion // Overrides
 }

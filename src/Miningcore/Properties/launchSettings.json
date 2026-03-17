@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "MiningCore": {
+    "Miningcore": {
       "commandName": "Project",
       "commandLineArgs": "-c ..\\..\\..\\config.json",
       "nativeDebugging": true

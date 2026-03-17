@@ -81,22 +81,19 @@ public class WagLaylaJob : KaspaJob
 
         var targetHashCoinbaseBytes = new Target(new BigInteger(hashCoinbaseBytes.ToNewReverseArray(), true, true));
         var hashCoinbaseBytesValue = targetHashCoinbaseBytes.ToUInt256();
-        //throw new StratumException(StratumError.LowDifficultyShare, $"nonce: {nonce} ||| hashCoinbaseBytes: {hashCoinbaseBytes.ToHexString()} ||| BigInteger: {targetHashCoinbaseBytes.ToBigInteger()} ||| Target: {hashCoinbaseBytesValue} - [stratum: {KaspaUtils.DifficultyToTarget(context.Difficulty)} - blockTemplate: {blockTargetValue}] ||| BigToCompact: {KaspaUtils.BigToCompact(targetHashCoinbaseBytes.ToBigInteger())} - [stratum: {KaspaUtils.BigToCompact(KaspaUtils.DifficultyToTarget(context.Difficulty))} - blockTemplate: {BlockTemplate.Header.Bits}] ||| shareDiff: {(double) new BigRational(KaspaConstants.Diff1b, targetHashCoinbaseBytes.ToBigInteger()) * shareMultiplier} - [stratum: {context.Difficulty} - blockTemplate: {KaspaUtils.TargetToDifficulty(KaspaUtils.CompactToBig(BlockTemplate.Header.Bits)) * (double) KaspaConstants.MinHash}]");
 
-        // calc share-diff
-        var shareDiff = (double) new BigRational(KaspaConstants.Diff1b, targetHashCoinbaseBytes.ToBigInteger()) * shareMultiplier;
+        // Difficulty calc (usa Diff1Target da Kaspa)
+        var shareDiff = (double) new BigRational(KaspaConstants.Diff1Target, targetHashCoinbaseBytes.ToBigInteger()) * shareMultiplier;
 
-        // diff check
         var stratumDifficulty = context.Difficulty;
         var ratio = shareDiff / stratumDifficulty;
 
-        // check if the share meets the much harder block difficulty (block candidate)
+        // Block-candidate?
         var isBlockCandidate = hashCoinbaseBytesValue <= blockTargetValue;
 
-        // test if share meets at least workers current difficulty
+        // Testa contra a diff atual (ou a anterior, se houve retarget muito recente)
         if(!isBlockCandidate && ratio < 0.99)
         {
-            // check if share matched the previous difficulty from before a vardiff retarget
             if(context.VarDiff?.LastUpdate != null && context.PreviousDifficulty.HasValue)
             {
                 ratio = shareDiff / context.PreviousDifficulty.Value;
@@ -104,7 +101,6 @@ public class WagLaylaJob : KaspaJob
                 if(ratio < 0.99)
                     throw new StratumException(StratumError.LowDifficultyShare, $"low difficulty share ({shareDiff})");
 
-                // use previous difficulty
                 stratumDifficulty = context.PreviousDifficulty.Value;
             }
             else
@@ -122,11 +118,11 @@ public class WagLaylaJob : KaspaJob
         {
             Span<byte> hashBytes = stackalloc byte[32];
             SerializeHeader(BlockTemplate.Header, hashBytes, false);
-
             result.IsBlockCandidate = true;
             result.BlockHash = hashBytes.ToHexString();
         }
 
         return result;
     }
+
 }

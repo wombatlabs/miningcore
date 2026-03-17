@@ -1,3 +1,4 @@
+// src/Miningcore/Api/Responses/GetPoolResponse.cs
 namespace Miningcore.Api.Responses;
 
 public class GetPoolResponse

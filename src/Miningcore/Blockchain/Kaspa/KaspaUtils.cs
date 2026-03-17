@@ -21,31 +21,31 @@ public static class KaspaUtils
     {
         Contract.RequiresNonNull(coin);
 
-        if(string.IsNullOrEmpty(address))
+        if (string.IsNullOrEmpty(address))
             return (null, new ArgumentException($"Empty address..."));
-        
+
         KaspaBech32Prefix networkBech32Prefix;
-        
-        switch(network.ToLower())
+
+        switch (network.ToLower())
         {
             case "devnet":
                 networkBech32Prefix = KaspaBech32Prefix.KaspaDev;
-                
+
                 break;
             case "simnet":
                 networkBech32Prefix = KaspaBech32Prefix.KaspaSim;
-                
+
                 break;
             case "testnet":
                 networkBech32Prefix = KaspaBech32Prefix.KaspaTest;
-                
+
                 break;
             default:
                 networkBech32Prefix = KaspaBech32Prefix.KaspaMain;
-                
+
                 break;
         }
-        
+
         try
         {
             var kaspaAddressUtility = new KaspaAddressUtility(coin);
@@ -58,44 +58,44 @@ public static class KaspaUtils
             return (null, ex);
         }
     }
-    
+
     public static BigInteger DifficultyToTarget(double difficulty)
     {
-        return (BigInteger) BigRational.Divide(new BigRational(KaspaConstants.Diff1Target), new BigRational(difficulty));
+        return (BigInteger)BigRational.Divide(new BigRational(KaspaConstants.Diff1Target), new BigRational(difficulty));
     }
 
     public static BigInteger CalculateTarget(uint bits)
     {
-        (uint mant, int expt) result;
 
-        uint unshiftedExpt = bits >> 24;
-        if (unshiftedExpt <= 3)
-        {
-            result.mant = (bits & 0xFFFFFF) >> (8 * (3 - (int)unshiftedExpt));
-            result.expt = 0;
-        }
-        else
-        {
-            result.mant = bits & 0xFFFFFF;
-            result.expt = 8 * ((int)(bits >> 24) - 3);
-        }
+        // 'compact' format: mantissa (23 bits) + exponent (8 bits)
+        uint mantissa = bits & 0x007FFFFF;
+        bool isNegative = (bits & 0x00800000) != 0; // should not be negative for valid targets
+        uint exponent = bits >> 24;
 
-        // The mantissa is signed but may not be negative
-        if (result.mant > 0x7FFFFF)
-        {
+        if (mantissa == 0)
             return BigInteger.Zero;
-        }
-        else
-        {
-            return BigInteger.Pow(result.mant, result.expt);
-        }
+
+        // target = mantissa * 2^(8 * (exponent - 3))  (not mantissa^exponent!)
+        BigInteger target = new BigInteger(mantissa);
+
+        int shift = (int)(8 * (exponent - 3));
+        if (shift > 0)
+            target <<= shift;
+        else if (shift < 0)
+            target >>= -shift; // rare, but for completeness
+
+        if (isNegative)
+            target = BigInteger.Negate(target);
+
+        return target;
     }
+
 
     public static double TargetToDifficulty(BigInteger target)
     {
-        return (double) BigRational.Divide(new BigRational(KaspaConstants.Diff1Target), new BigRational(target));
+        return (double)BigRational.Divide(new BigRational(KaspaConstants.Diff1Target), new BigRational(target));
     }
-    
+
     public static double BigDiffToLittle(BigInteger diff)
     {
         BigInteger numerator = new BigInteger(2);
@@ -105,8 +105,8 @@ public static class KaspaUtils
 
         BigInteger tempA = BigInteger.Pow(2, 30);
         final = BigInteger.Divide(final, tempA);
-        
-        return (double) final;
+
+        return (double)final;
     }
 
     public static BigInteger CompactToBig(uint compact)
@@ -178,7 +178,7 @@ public static class KaspaUtils
         IHashAlgorithm scriptHasher = new Blake2b();
         Span<byte> hashBytes = stackalloc byte[32];
         scriptHasher.Digest(serializedScript, hashBytes);
-            
+
         return hashBytes.ToArray();
     }
 }
@@ -221,7 +221,7 @@ public class KaspaAddressPublicKey : KaspaIAddress
     {
         return prefix;
     }
-    
+
     public byte Version()
     {
         return version;
@@ -337,7 +337,7 @@ public class KaspaAddressUtility
     public KaspaCoinTemplate coin { get; private set; }
 
     private Dictionary<string, KaspaBech32Prefix> stringsToBech32Prefixes;
-    
+
     public KaspaAddressUtility(KaspaCoinTemplate coin)
     {
         Contract.RequiresNonNull(coin);
@@ -387,7 +387,7 @@ public class KaspaAddressUtility
                 throw new InvalidOperationException("Unknown address type");
         }
     }
-    
+
     public KaspaBech32Prefix ParsePrefix(string prefixString)
     {
         if (!stringsToBech32Prefixes.TryGetValue(prefixString, out var prefix))

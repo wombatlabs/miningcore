@@ -91,15 +91,17 @@ public class CryptonoteJob
 
     private string EncodeTarget(double difficulty, int size = 4)
     {
-        var diff = BigInteger.ValueOf((long) (difficulty * 255d));
+        var diff = BigInteger.ValueOf((long)(difficulty * 255d));
         var quotient = CryptonoteConstants.Diff1.Divide(diff).Multiply(BigInteger.ValueOf(255));
         var bytes = quotient.ToByteArray().AsSpan();
         Span<byte> padded = stackalloc byte[32];
 
         var padLength = padded.Length - bytes.Length;
 
-        if(padLength > 0)
+        if (padLength > 0)
             bytes.CopyTo(padded.Slice(padLength, bytes.Length));
+        else
+            bytes.Slice(bytes.Length - padded.Length, padded.Length).CopyTo(padded);
 
         padded = padded[..size];
         padded.Reverse();
@@ -111,7 +113,7 @@ public class CryptonoteJob
     {
         // blockhash is computed from the converted blob data prefixed with its length
         Span<byte> block = stackalloc byte[blobConverted.Length + 1];
-        block[0] = (byte) blobConverted.Length;
+        block[0] = (byte)blobConverted.Length;
         blobConverted.CopyTo(block[1..]);
 
         CryptonoteBindings.CryptonightHashFast(block, result);
@@ -126,10 +128,10 @@ public class CryptonoteJob
     public void PrepareWorkerJob(CryptonoteWorkerJob workerJob, out string blob, out string target)
     {
         workerJob.Height = BlockTemplate.Height;
-        workerJob.ExtraNonce = (uint) Interlocked.Increment(ref extraNonce);
+        workerJob.ExtraNonce = (uint)Interlocked.Increment(ref extraNonce);
         workerJob.SeedHash = BlockTemplate.SeedHash;
 
-        if(extraNonce < 0)
+        if (extraNonce < 0)
             extraNonce = 0;
 
         blob = EncodeBlob(workerJob.ExtraNonce);
@@ -145,7 +147,7 @@ public class CryptonoteJob
         var context = worker.ContextAs<CryptonoteWorkerContext>();
 
         // validate nonce
-        if(!CryptonoteConstants.RegexValidNonce.IsMatch(nonce))
+        if (!CryptonoteConstants.RegexValidNonce.IsMatch(nonce))
             throw new StratumException(StratumError.MinusOne, "malformed nonce");
 
         // clone template
@@ -162,7 +164,7 @@ public class CryptonoteJob
 
         // convert
         var blobConverted = CryptonoteBindings.ConvertBlob(blob, blobTemplate.Length, blobType);
-        if(blobConverted == null)
+        if (blobConverted == null)
             throw new StratumException(StratumError.MinusOne, "malformed blob");
 
         // hash it
@@ -170,25 +172,25 @@ public class CryptonoteJob
         hashFunc(RandomXRealm, BlockTemplate.SeedHash, blobConverted, headerHash, BlockTemplate.Height);
 
         var headerHashString = headerHash.ToHexString();
-        if(headerHashString != workerHash)
+        if (headerHashString != workerHash)
             throw new StratumException(StratumError.MinusOne, $"bad hash [generated: {headerHashString}, received: {workerHash}]");
 
         // check difficulty
         var headerValue = headerHash.ToBigInteger();
-        var shareDiff = (double) new BigRational(CryptonoteConstants.Diff1b, headerValue);
+        var shareDiff = (double)new BigRational(CryptonoteConstants.Diff1b, headerValue);
         var stratumDifficulty = context.Difficulty;
         var ratio = shareDiff / stratumDifficulty;
         var isBlockCandidate = shareDiff >= BlockTemplate.Difficulty;
 
         // test if share meets at least workers current difficulty
-        if(!isBlockCandidate && ratio < 0.99)
+        if (!isBlockCandidate && ratio < 0.99)
         {
             // check if share matched the previous difficulty from before a vardiff retarget
-            if(context.VarDiff?.LastUpdate != null && context.PreviousDifficulty.HasValue)
+            if (context.VarDiff?.LastUpdate != null && context.PreviousDifficulty.HasValue)
             {
                 ratio = shareDiff / context.PreviousDifficulty.Value;
 
-                if(ratio < 0.99)
+                if (ratio < 0.99)
                     throw new StratumException(StratumError.LowDifficultyShare, $"low difficulty share ({shareDiff})");
 
                 // use previous difficulty
@@ -205,13 +207,13 @@ public class CryptonoteJob
             Difficulty = stratumDifficulty,
         };
 
-        if(isBlockCandidate)
+        if (isBlockCandidate)
         {
             // Compute block hash
             Span<byte> blockHash = stackalloc byte[32];
 
             // Not all Cryptonote coins are equal
-            if(blobType == ZephyrConstants.BlobType || blobType == ScalaConstants.ScalaBlobType)
+            if (blobType == ZephyrConstants.BlobType || blobType == ScalaConstants.ScalaBlobType)
                 CryptonoteBindings.GetBlockId(blob, blockHash, blobType);
             else
                 ComputeBlockHash(blobConverted, blockHash);

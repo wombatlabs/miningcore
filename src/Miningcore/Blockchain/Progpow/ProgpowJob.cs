@@ -1,5 +1,8 @@
+using System;
 using System.Globalization;
 using System.Text;
+using System.Buffers;
+using System.Runtime.CompilerServices;
 using Miningcore.Blockchain.Bitcoin;
 using Miningcore.Blockchain.Bitcoin.Configuration;
 using Miningcore.Blockchain.Bitcoin.DaemonResponses;
@@ -29,9 +32,14 @@ public class ProgpowJob : BitcoinJob
     protected IProgpowCache progpowHasher;
     private new ProgpowJobParams jobParams;
 
+    // ===== Exact fixed-point config (no BigRational in hot path) =====
+    private static readonly System.Numerics.BigInteger SCALE = new System.Numerics.BigInteger(1_000_000_000_000L); // 1e12
+    private const long SCALE_M = 1_000_000; // 1e6 for shareMultiplier
+    private long shareMultScaled; // set in Init()
+
     protected virtual byte[] SerializeHeader(Span<byte> coinbaseHash)
     {
-        // build merkle-root
+        // Build merkle-root
         var merkleRoot = mt.WithFirst(coinbaseHash.ToArray());
 
         // Build version
@@ -58,114 +66,227 @@ public class ProgpowJob : BitcoinJob
         var context = worker.ContextAs<ProgpowWorkerContext>();
         var extraNonce1 = context.ExtraNonce1;
 
-        // build coinbase
+        // 1) Build coinbase and hash it
         var coinbase = SerializeCoinbase(extraNonce1);
         Span<byte> coinbaseHash = stackalloc byte[32];
         coinbaseHasher.Digest(coinbase, coinbaseHash);
 
-        // hash block-header
+        // 2) Build & hash block header (header-hash is big-endian hex string to miners)
         var headerBytes = SerializeHeader(coinbaseHash);
         Span<byte> headerHash = stackalloc byte[32];
         headerHasher.Digest(headerBytes, headerHash);
-        headerHash.Reverse();
+        headerHash.Reverse(); // convert to BE for hex string compare
 
         var headerHashHex = headerHash.ToHexString();
+        if(!headerHashHex.Equals(inputHeaderHash, StringComparison.OrdinalIgnoreCase))
+            throw new StratumException(StratumError.MinusOne, "bad header-hash");
 
-        if(headerHashHex != inputHeaderHash)
-            throw new StratumException(StratumError.MinusOne, $"bad header-hash");
-
-        if(!progpowHasher.Compute(logger, (int) BlockTemplate.Height, headerHash.ToArray(), nonce, out var mixHashOut, out var resultBytes))
-            throw new StratumException(StratumError.MinusOne, "bad hash");
-
-        if(mixHash != mixHashOut.ToHexString())
-            throw new StratumException(StratumError.MinusOne, $"bad mix-hash");
-
-        resultBytes.ReverseInPlace();
-        mixHashOut.ReverseInPlace();
-
-        var resultValue = new uint256(resultBytes);
-        var resultValueBig = resultBytes.AsSpan().ToBigInteger();
-        // calc share-diff
-        var shareDiff = (double) new BigRational(RavencoinConstants.Diff1, resultValueBig) * shareMultiplier;
-        var stratumDifficulty = context.Difficulty;
-        var ratio = shareDiff / stratumDifficulty;
-
-        // check if the share meets the much harder block difficulty (block candidate)
-        var isBlockCandidate = resultValue <= blockTargetValue;
-
-        // test if share meets at least workers current difficulty
-        if(!isBlockCandidate && ratio < 0.99)
+        // 3) KawPoW hash (native) using height/epoch cache
+        byte[] headerArr = ArrayPool<byte>.Shared.Rent(32);
+        try
         {
-            // check if share matched the previous difficulty from before a vardiff retarget
-            if(context.VarDiff?.LastUpdate != null && context.PreviousDifficulty.HasValue)
+            headerHash.CopyTo(headerArr);
+            if(!progpowHasher.Compute(logger, (int) BlockTemplate.Height, headerArr, nonce, out var mixHashOut, out var resultBytes))
+                throw new StratumException(StratumError.MinusOne, "bad hash");
+
+            // Be tolerant to miner hex casing
+            var mixHex = mixHashOut.ToHexString();
+            if(!mixHex.Equals(mixHash, StringComparison.OrdinalIgnoreCase))
+                throw new StratumException(StratumError.MinusOne, "bad mix-hash");
+
+            // Convert to pool-internal endian for further math
+            resultBytes.ReverseInPlace();
+            mixHashOut.ReverseInPlace();
+
+            var resultValue = new uint256(resultBytes);
+            var resultValueBig = resultBytes.AsSpan().ToBigInteger();
+
+            // Variant Diff1 (exact)
+            var diff1ForVariantBig = (coin.Symbol == "FIRO"
+                ? FiroConstants.Diff1
+                : RavencoinConstants.Diff1);
+
+            // ---- EXACT MATH: shareDiff in fixed-point (scaled by 1e12) ----
+            var shareDiffScaled = ComputeShareDiffScaledExact(diff1ForVariantBig, resultValueBig);
+            // Optional: for logs only (double)
+            var shareDiff = (double) shareDiffScaled / 1_000_000_000_000d;
+            // ----------------------------------------------------------------
+
+            // Check block candidate with exact uint256 compare (unchanged)
+            var isBlockCandidate = resultValue <= blockTargetValue;
+
+            // VarDiff thresholds using exact integer comparisons
+            var stratumDifficulty = context.Difficulty;
+
+            if(!isBlockCandidate && !MeetsDifficultyThresholdExact(shareDiffScaled, stratumDifficulty, 0.99))
             {
-                ratio = shareDiff / context.PreviousDifficulty.Value;
+                if(context.VarDiff?.LastUpdate != null && context.PreviousDifficulty.HasValue)
+                {
+                    if(!MeetsDifficultyThresholdExact(shareDiffScaled, context.PreviousDifficulty.Value, 0.99))
+                        throw new StratumException(StratumError.LowDifficultyShare, $"low difficulty share ({shareDiff})");
 
-                if(ratio < 0.99)
+                    stratumDifficulty = context.PreviousDifficulty.Value;
+                }
+                else
                     throw new StratumException(StratumError.LowDifficultyShare, $"low difficulty share ({shareDiff})");
-
-                // use previous difficulty
-                stratumDifficulty = context.PreviousDifficulty.Value;
             }
 
-            else
-                throw new StratumException(StratumError.LowDifficultyShare, $"low difficulty share ({shareDiff})");
+            // Compose share (external API stays as before)
+            var result = new Share
+            {
+                BlockHeight = BlockTemplate.Height,
+                NetworkDifficulty = Difficulty,
+                Difficulty = stratumDifficulty / shareMultiplier,
+            };
+
+            if(!isBlockCandidate)
+                return (result, null);
+
+            // Block candidate path
+            result.IsBlockCandidate = true;
+            result.BlockHash = resultBytes.ReverseInPlace().ToHexString();
+
+            var blockHex = SerializeBlock(headerBytes, coinbase, nonce, mixHashOut).ToHexString();
+            return (result, blockHex);
         }
-
-        var result = new Share
+        finally
         {
-            BlockHeight = BlockTemplate.Height,
-            NetworkDifficulty = Difficulty,
-            Difficulty = stratumDifficulty / shareMultiplier,
-        };
-
-        if(!isBlockCandidate)
-        {
-            return (result, null);
+            ArrayPool<byte>.Shared.Return(headerArr);
         }
-
-        result.IsBlockCandidate = true;
-        result.BlockHash = resultBytes.ReverseInPlace().ToHexString();
-
-        var blockBytes = SerializeBlock(headerBytes, coinbase, nonce, mixHashOut);
-        var blockHex = blockBytes.ToHexString();
-
-        return (result, blockHex);
     }
 
     protected virtual byte[] SerializeCoinbase(string extraNonce1)
     {
         var extraNonce1Bytes = extraNonce1.HexToByteArray();
+        var len = coinbaseInitial.Length + extraNonce1Bytes.Length + coinbaseFinal.Length;
 
-        using var stream = new MemoryStream();
-        {
-            stream.Write(coinbaseInitial);
-            stream.Write(extraNonce1Bytes);
-            stream.Write(coinbaseFinal);
+        var result = new byte[len];
+        Buffer.BlockCopy(coinbaseInitial, 0, result, 0, coinbaseInitial.Length);
+        Buffer.BlockCopy(extraNonce1Bytes, 0, result, coinbaseInitial.Length, extraNonce1Bytes.Length);
+        Buffer.BlockCopy(coinbaseFinal, 0, result, coinbaseInitial.Length + extraNonce1Bytes.Length, coinbaseFinal.Length);
 
-            return stream.ToArray();
-        }
+        return result;
     }
 
     protected virtual byte[] SerializeBlock(byte[] header, byte[] coinbase, ulong nonce, byte[] mixHash)
     {
+        // Precompute size: header(80) + nonce(8) + mix(32) + varint(txcount) + coinbase + txs
         var rawTransactionBuffer = BuildRawTransactionBuffer();
-        var transactionCount = (uint) BlockTemplate.Transactions.Length + 1; // +1 for prepended coinbase tx
+        var txCount = (uint) BlockTemplate.Transactions.Length + 1;
+        var varIntLen = VarIntSize(txCount); // local helper (compat)
 
-        using var stream = new MemoryStream();
+        int total = header.Length + sizeof(ulong) + 32 + varIntLen + coinbase.Length + rawTransactionBuffer.Length;
+
+        byte[] buf = ArrayPool<byte>.Shared.Rent(total);
+        try
         {
-            var bs = new BitcoinStream(stream, true);
+            var span = buf.AsSpan(0, total);
+            int o = 0;
 
-            bs.ReadWrite(header);
-            bs.ReadWrite(ref nonce);
-            bs.ReadWrite(mixHash);
-            bs.ReadWriteAsVarInt(ref transactionCount);
+            // header (80 bytes)
+            header.CopyTo(span.Slice(o)); o += header.Length;
 
-            bs.ReadWrite(coinbase);
-            bs.ReadWrite(rawTransactionBuffer);
+            // nonce (LE)
+            BitConverter.TryWriteBytes(span.Slice(o, 8), nonce); o += 8;
 
-            return stream.ToArray();
+            // mixHash (LE as bytes already)
+            mixHash.CopyTo(span.Slice(o)); o += 32;
+
+            // varint txcount
+            o += WriteVarInt(span.Slice(o), txCount);
+
+            // coinbase
+            coinbase.CopyTo(span.Slice(o)); o += coinbase.Length;
+
+            // other txs
+            rawTransactionBuffer.CopyTo(span.Slice(o)); // o += rawTransactionBuffer.Length;
+
+            // Compact to exact array
+            var result = new byte[total];
+            Buffer.BlockCopy(buf, 0, result, 0, total);
+            return result;
         }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buf);
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int VarIntSize(ulong value) =>
+        value < 0xFD ? 1 :
+        (value <= 0xFFFF ? 3 :
+        (value <= 0xFFFFFFFF ? 5 : 9));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int WriteVarInt(Span<byte> dst, ulong value)
+    {
+        // Minimal VarInt writer (NBitcoin compat)
+        if(value < 0xFD)
+        {
+            dst[0] = (byte) value;
+            return 1;
+        }
+
+        if(value <= 0xFFFF)
+        {
+            dst[0] = 0xFD;
+            dst[1] = (byte) (value & 0xFF);
+            dst[2] = (byte) (value >> 8);
+            return 3;
+        }
+
+        if(value <= 0xFFFFFFFF)
+        {
+            dst[0] = 0xFE;
+            BitConverter.TryWriteBytes(dst.Slice(1, 4), (uint) value);
+            return 5;
+        }
+
+        dst[0] = 0xFF;
+        BitConverter.TryWriteBytes(dst.Slice(1, 8), value);
+        return 9;
+    }
+
+    // ===== Exact difficulty helpers =====
+
+    /// <summary>
+    /// Returns scaled share-diff: floor( (Diff1 * SCALE) / resultValue ) * shareMultiplierScaled / SCALE_M
+    /// The returned value is scaled by SCALE (1e12).
+    /// </summary>
+    private System.Numerics.BigInteger ComputeShareDiffScaledExact(System.Numerics.BigInteger diff1, System.Numerics.BigInteger resultValue)
+    {
+        if (resultValue.Sign <= 0)
+            resultValue = System.Numerics.BigInteger.One; // guard (should never be 0)
+
+        var baseScaled = (diff1 * SCALE) / resultValue;
+        var withMult = (baseScaled * shareMultScaled) / SCALE_M;
+
+        if (withMult.Sign <= 0)
+            withMult = System.Numerics.BigInteger.One;
+
+        return withMult; // still scaled by SCALE
+    }
+
+    /// <summary>
+    /// Returns true if shareDiffScaled >= threshold * stratumDiff (all in fixed-point).
+    /// threshold is a double like 0.99; converted to fixed-point internally.
+    /// </summary>
+    private bool MeetsDifficultyThresholdExact(System.Numerics.BigInteger shareDiffScaled, double stratumDifficulty, double threshold)
+    {
+        const long SCALE_T = 1_000_000; // 1e6 for threshold
+        if (!double.IsFinite(stratumDifficulty) || stratumDifficulty <= 0d)
+            stratumDifficulty = 1d;
+
+        var thrScaled = (long) Math.Round(threshold * SCALE_T, MidpointRounding.AwayFromZero);
+        if (thrScaled <= 0) thrScaled = 1;
+
+        // rightScaled = round(stratumDifficulty * SCALE) * thrScaled / SCALE_T
+        decimal d = (decimal) stratumDifficulty;
+        var rightScaled = new System.Numerics.BigInteger((long) Math.Round(d * 1_000_000_000_000m, MidpointRounding.AwayFromZero));
+        rightScaled = (rightScaled * thrScaled) / SCALE_T;
+
+        return shareDiffScaled >= rightScaled;
     }
 
     #region API-Surface
@@ -177,6 +298,7 @@ public class ProgpowJob : BitcoinJob
         bool isPoS, double shareMultiplier, IHashAlgorithm coinbaseHasher,
         IHashAlgorithm headerHasher, IHashAlgorithm blockHasher, IProgpowCache progpowHasher)
     {
+        // --- Argument checks
         Contract.RequiresNonNull(blockTemplate);
         Contract.RequiresNonNull(pc);
         Contract.RequiresNonNull(cc);
@@ -188,6 +310,7 @@ public class ProgpowJob : BitcoinJob
         Contract.RequiresNonNull(progpowHasher);
         Contract.Requires<ArgumentException>(!string.IsNullOrEmpty(jobId));
 
+        // --- Bind coin/template & context (unchanged)
         this.coin = pc.Template.As<ProgpowCoinTemplate>();
         this.txVersion = coin.CoinbaseTxVersion;
         this.network = network;
@@ -196,17 +319,25 @@ public class ProgpowJob : BitcoinJob
         this.BlockTemplate = blockTemplate;
         this.JobId = jobId;
 
-        var coinbaseString = !string.IsNullOrEmpty(cc.PaymentProcessing?.CoinbaseString) ?
-            cc.PaymentProcessing?.CoinbaseString.Trim() : "Miningcore";
+        // --- Coinbase tag (unchanged)
+        var coinbaseString = !string.IsNullOrEmpty(cc.PaymentProcessing?.CoinbaseString)
+            ? cc.PaymentProcessing?.CoinbaseString.Trim()
+            : "Miningcore";
 
         if(!string.IsNullOrEmpty(coinbaseString))
             this.scriptSigFinalBytes = new Script(Op.GetPushOp(Encoding.UTF8.GetBytes(coinbaseString))).ToBytes();
 
+        // --- Network difficulty from block template (unchanged)
         this.Difficulty = new Target(System.Numerics.BigInteger.Parse(BlockTemplate.Target, NumberStyles.HexNumber)).Difficulty;
 
-        this.extraNoncePlaceHolderLength = RavencoinConstants.ExtranoncePlaceHolderLength;
-        this.shareMultiplier = shareMultiplier;
-        
+        // --- Select KawPoW profile parameters ONCE per job (fast for the hot path)
+        {
+            var sel = Miningcore.Blockchain.Progpow.Kawpow
+.KawpowVariant.SelectFor(pc.Template);
+            this.extraNoncePlaceHolderLength = sel.extranonceLen; // field provided by base class
+        }
+
+        // --- Masternode / Payee / Founder / MinerFund (unchanged)
         if(coin.HasMasterNodes)
         {
             masterNodeParameters = BlockTemplate.Extra.SafeExtensionDataAs<MasterNodeBlockTemplateExtra>();
@@ -214,9 +345,7 @@ public class ProgpowJob : BitcoinJob
             if(coin.Symbol == "FIRO")
             {
                 if(masterNodeParameters.Extra?.ContainsKey("znode") == true)
-                {
                     masterNodeParameters.Masternode = JToken.FromObject(masterNodeParameters.Extra["znode"]);
-                }
             }
 
             if(!string.IsNullOrEmpty(masterNodeParameters.CoinbasePayload))
@@ -226,21 +355,22 @@ public class ProgpowJob : BitcoinJob
                 txVersion += txType << 16;
             }
         }
-        
+
         if(coin.HasPayee)
             payeeParameters = BlockTemplate.Extra.SafeExtensionDataAs<PayeeBlockTemplateExtra>();
 
-        if (coin.HasFounderFee)
+        if(coin.HasFounderFee)
             founderParameters = BlockTemplate.Extra.SafeExtensionDataAs<FounderBlockTemplateExtra>();
 
-        if (coin.HasMinerFund)
+        if(coin.HasMinerFund)
             minerFundParameters = BlockTemplate.Extra.SafeExtensionDataAs<MinerFundTemplateExtra>("coinbasetxn", "minerfund");
 
+        // --- Hashers & target (unchanged)
         this.coinbaseHasher = coinbaseHasher;
         this.headerHasher = headerHasher;
         this.blockHasher = blockHasher;
         this.progpowHasher = progpowHasher;
-        
+
         if(!string.IsNullOrEmpty(BlockTemplate.Target))
             this.blockTargetValue = new uint256(BlockTemplate.Target);
         else
@@ -249,14 +379,20 @@ public class ProgpowJob : BitcoinJob
             this.blockTargetValue = tmp.ToUInt256();
         }
 
+        // --- Precompute branches & coinbase (unchanged)
         BuildMerkleBranches();
         BuildCoinbase();
 
+        // --- Notify params cache (unchanged)
         this.jobParams = new ProgpowJobParams
         {
             Height = BlockTemplate.Height,
             CleanJobs = false
         };
+
+        // --- Cache scaled shareMultiplier for exact math ---
+        shareMultScaled = (long) Math.Round(shareMultiplier * SCALE_M, MidpointRounding.AwayFromZero);
+        if (shareMultScaled <= 0) shareMultScaled = 1;
     }
 
     public new object GetJobParams(bool isNew)
@@ -291,7 +427,6 @@ public class ProgpowJob : BitcoinJob
 
         return headerHash.ToHexString();
     }
-
 
     #endregion // API-Surface
 }

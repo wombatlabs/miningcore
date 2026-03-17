@@ -24,4 +24,10 @@ public class KaspaPaymentProcessingConfigExtra
     /// Default: 20000 (0.0002 KAS)
     /// </summary>
     public ulong? MaxFee { get; set; }
+
+    
+    public bool? SimpleSendMode { get; set; }    
+    
+
+    public string WalletHttpBaseUrl { get; set; }
 }

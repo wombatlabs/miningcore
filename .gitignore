@@ -213,3 +213,23 @@ fabric.properties
 /*/*/*/*/*/*/*/*/*.o
 /*/*/*/*/*/*/*/*/*/*.o
 /*/*/*/*/*/*/*/*/*/*.o
+
+
+# TEMP FILES
+TEMP
+
+# Ignore compiled native code artifacts
+src/Native/libmultihash/**/*.o
+src/Native/libmultihash/**/*.so
+src/Native/libcryptonote/**/*.o
+src/Native/libcryptonote/**/*.so
+src/Native/libzanonote/**/*.o
+src/Native/libzanonote/**/*.so
+src/Native/libmerakipow/**/*.o
+src/Native/libmerakipow/**/*.so
+src/Native/**/CMakeFiles/
+src/Native/**/build/
+
+# Ignore
+script.py
+script.txt

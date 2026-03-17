@@ -37,52 +37,52 @@ public class MetricsPublisher : BackgroundService
 
     private void CreateMetrics()
     {
-        poolConnectionsGauge = Metrics.CreateGauge("miningcore_pool_connections", "Number of connections per pool", new GaugeConfiguration
+        poolConnectionsGauge = Metrics.CreateGauge("Miningcore_pool_connections", "Number of connections per pool", new GaugeConfiguration
         {
             LabelNames = new[] { "pool" }
         });
 
-        poolHashrateGauge = Metrics.CreateGauge("miningcore_pool_hashrate", "Hashrate per pool", new GaugeConfiguration
+        poolHashrateGauge = Metrics.CreateGauge("Miningcore_pool_hashrate", "Hashrate per pool", new GaugeConfiguration
         {
             LabelNames = new[] { "pool" }
         });
 
-        btStreamLatencySummary = Metrics.CreateSummary("miningcore_btstream_latency", "Latency of streaming block-templates in ms", new SummaryConfiguration
+        btStreamLatencySummary = Metrics.CreateSummary("Miningcore_btstream_latency", "Latency of streaming block-templates in ms", new SummaryConfiguration
         {
             LabelNames = new[] { "pool" }
         });
 
-        shareCounter = Metrics.CreateCounter("miningcore_shares_total", "Received shares per pool", new CounterConfiguration
+        shareCounter = Metrics.CreateCounter("Miningcore_shares_total", "Received shares per pool", new CounterConfiguration
         {
             LabelNames = new[] { "pool" }
         });
 
-        validShareCounter = Metrics.CreateCounter("miningcore_valid_shares_total", "Valid received shares per pool", new CounterConfiguration
+        validShareCounter = Metrics.CreateCounter("Miningcore_valid_shares_total", "Valid received shares per pool", new CounterConfiguration
         {
             LabelNames = new[] { "pool" }
         });
 
-        invalidShareCounter = Metrics.CreateCounter("miningcore_invalid_shares_total", "Invalid received shares per pool", new CounterConfiguration
+        invalidShareCounter = Metrics.CreateCounter("Miningcore_invalid_shares_total", "Invalid received shares per pool", new CounterConfiguration
         {
             LabelNames = new[] { "pool" }
         });
 
-        rpcRequestDurationSummary = Metrics.CreateSummary("miningcore_rpcrequest_execution_time", "RPC request execution time ms", new SummaryConfiguration
+        rpcRequestDurationSummary = Metrics.CreateSummary("Miningcore_rpcrequest_execution_time", "RPC request execution time ms", new SummaryConfiguration
         {
             LabelNames = new[] { "pool", "method" }
         });
 
-        stratumRequestDurationSummary = Metrics.CreateSummary("miningcore_stratum_request_execution_time", "Stratum request execution time ms", new SummaryConfiguration
+        stratumRequestDurationSummary = Metrics.CreateSummary("Miningcore_stratum_request_execution_time", "Stratum request execution time ms", new SummaryConfiguration
         {
             LabelNames = new[] { "pool", "method" }
         });
 
-        apiRequestDurationSummary = Metrics.CreateSummary("miningcore_api_request_execution_time", "API request execution time ms", new SummaryConfiguration
+        apiRequestDurationSummary = Metrics.CreateSummary("Miningcore_api_request_execution_time", "API request execution time ms", new SummaryConfiguration
         {
             LabelNames = new[] { "request" }
         });
 
-        hashComputationSummary = Metrics.CreateSummary("miningcore_hash_computation_time", "Hash computation time ms", new SummaryConfiguration
+        hashComputationSummary = Metrics.CreateSummary("Miningcore_hash_computation_time", "Hash computation time ms", new SummaryConfiguration
         {
             LabelNames = new[] { "algo" }
         });

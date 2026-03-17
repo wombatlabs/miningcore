@@ -1,3 +1,4 @@
+// src/Miningcore/Api/Controllers/AdminApiController.cs
 using Autofac;
 using Microsoft.AspNetCore.Mvc;
 using Miningcore.Extensions;

@@ -1,3 +1,4 @@
+// src/Miningcore/Api/Controllers/ApiControllerBase.cs
 using System.Net;
 using Autofac;
 using AutoMapper;

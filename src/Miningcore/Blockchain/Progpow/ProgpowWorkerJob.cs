@@ -26,14 +26,10 @@ public class ProgpowWorkerJob
 
     private bool RegisterSubmit(string nonce, string headerHash, string mixHash)
     {
-        var key = new StringBuilder()
-            .Append(nonce) // lowercase as we don't want to accept case-sensitive values as valid.
-            .Append(headerHash)
-            .Append(mixHash)
-            .ToString();
-
+        var key = string.Concat(nonce, headerHash, mixHash); // already lowercased by caller
         return submissions.TryAdd(key, true);
     }
+
 
     public (Share Share, string BlockHex) ProcessShare(ILogger logger, StratumConnection worker, string nonce, string headerHash, string mixHash)
     {
@@ -42,24 +38,21 @@ public class ProgpowWorkerJob
 
         var context = worker.ContextAs<ProgpowWorkerContext>();
 
-        // mixHash
-        if(mixHash.Length != 64)
+        // Validate hex sizes (strict lengths to avoid garbage)
+        if(mixHash is null || mixHash.Length != 64)
             throw new StratumException(StratumError.Other, $"incorrect size of mixHash: {mixHash}");
 
-        // validate nonce
-        if(nonce.Length != 16)
+        if(nonce is null || nonce.Length != 16)
             throw new StratumException(StratumError.Other, $"incorrect size of nonce: {nonce}");
 
-        // check if nonce is within range
-        if(nonce.IndexOf(context.ExtraNonce1[0..4], StringComparison.OrdinalIgnoreCase) != 0)
-            throw new StratumException(StratumError.Other, $"nonce out of range: {nonce}");
-
-        // dupe check
-        if(!RegisterSubmit(nonce, headerHash, mixHash))
+        // Do NOT enforce nonce prefix == ExtraNonce1[0..4]: not all KawPoW miners follow that.
+        // Just ensure dedupe is case-insensitive.
+        if(!RegisterSubmit(nonce.ToLowerInvariant(), headerHash.ToLowerInvariant(), mixHash.ToLowerInvariant()))
             throw new StratumException(StratumError.DuplicateShare, "duplicate share");
 
         var nonceLong = ulong.Parse(nonce, NumberStyles.HexNumber);
 
         return Job.ProcessShareInternal(logger, worker, nonceLong, headerHash, mixHash);
     }
+
 }

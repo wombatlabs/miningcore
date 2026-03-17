@@ -6,6 +6,7 @@ using Miningcore.Blockchain.Progpow.Custom.Firo;
 using Miningcore.Blockchain.Progpow.Custom.Kiiro;
 using Miningcore.Blockchain.Progpow.Custom.Realichain;
 using Miningcore.Blockchain.Progpow.Custom.Telestai;
+using Miningcore.Blockchain.Progpow.Kawpow.Custom.Frencoin;
 using Miningcore.Configuration;
 using Miningcore.Contracts;
 using Miningcore.Crypto;
@@ -60,8 +61,10 @@ public class ProgpowJobManager : BitcoinJobManagerBase<ProgpowJob>
                 return new RealichainJob();
             case "TLS":
                 return new TelestaiJob();
+            case "FREN":
+                return new FrencoinJob();
         }
-        
+
         return new ProgpowJob();
     }
 

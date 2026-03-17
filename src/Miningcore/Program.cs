@@ -84,25 +84,25 @@ public class Program : BackgroundService
 
             var app = ParseCommandLine(args);
 
-            if(versionOption.HasValue())
+            if (versionOption.HasValue())
             {
                 app.ShowVersion();
                 return;
             }
 
-            if(dumpConfigOption.HasValue())
+            if (dumpConfigOption.HasValue())
             {
                 DumpParsedConfig(clusterConfig);
                 return;
             }
 
-            if(generateSchemaOption.HasValue())
+            if (generateSchemaOption.HasValue())
             {
                 GenerateJsonConfigSchema();
                 return;
             }
 
-            if(!configFileOption.HasValue())
+            if (!configFileOption.HasValue())
             {
                 app.ShowHelp();
                 return;
@@ -123,7 +123,7 @@ public class Program : BackgroundService
 
             hostBuilder
                 .UseServiceProviderFactory(new AutofacServiceProviderFactory())
-                .ConfigureContainer((Action<ContainerBuilder>) ConfigureAutofac)
+                .ConfigureContainer((Action<ContainerBuilder>)ConfigureAutofac)
                 .UseNLog()
                 .ConfigureLogging(logging =>
                 {
@@ -142,7 +142,7 @@ public class Program : BackgroundService
                     services.AddHostedService<Program>();
                 });
 
-            if(clusterConfig.Api == null || clusterConfig.Api.Enabled)
+            if (clusterConfig.Api == null || clusterConfig.Api.Enabled)
             {
                 var address = clusterConfig.Api?.ListenAddress != null
                     ? (clusterConfig.Api.ListenAddress != "*" ? IPAddress.Parse(clusterConfig.Api.ListenAddress) : IPAddress.Any)
@@ -152,9 +152,9 @@ public class Program : BackgroundService
                 var enableApiRateLimiting = clusterConfig.Api?.RateLimiting?.Disabled != true;
                 var apiTlsEnable = clusterConfig.Api?.Tls?.Enabled == true || !string.IsNullOrEmpty(clusterConfig.Api?.Tls?.TlsPfxFile);
 
-                if(apiTlsEnable)
+                if (apiTlsEnable)
                 {
-                    if(!File.Exists(clusterConfig.Api.Tls.TlsPfxFile))
+                    if (!File.Exists(clusterConfig.Api.Tls.TlsPfxFile))
                         throw new PoolStartupException($"Certificate file {clusterConfig.Api.Tls.TlsPfxFile} does not exist!");
                 }
 
@@ -163,7 +163,7 @@ public class Program : BackgroundService
                     builder.ConfigureServices(services =>
                     {
                         // rate limiting
-                        if(enableApiRateLimiting)
+                        if (enableApiRateLimiting)
                         {
                             services.Configure<IpRateLimitOptions>(ConfigureIpRateLimitOptions);
                             services.AddSingleton<IIpPolicyStore, MemoryCacheIpPolicyStore>();
@@ -188,17 +188,17 @@ public class Program : BackgroundService
                         {
                             options.JsonSerializerOptions.WriteIndented = true;
 
-                            if(!clusterConfig.Api.LegacyNullValueHandling)
+                            if (!clusterConfig.Api.LegacyNullValueHandling)
                                 options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
                         });
 
                         // NSwag
-                        #if DEBUG
+#if DEBUG
                         services.AddOpenApiDocument(settings =>
                         {
                             settings.DocumentProcessors.Insert(0, new NSwagDocumentProcessor());
                         });
-                        #endif
+#endif
 
                         services.AddResponseCompression();
                         services.AddCors();
@@ -208,13 +208,13 @@ public class Program : BackgroundService
                     {
                         options.Listen(address, port, listenOptions =>
                         {
-                            if(apiTlsEnable)
+                            if (apiTlsEnable)
                                 listenOptions.UseHttps(clusterConfig.Api.Tls.TlsPfxFile, clusterConfig.Api.Tls.TlsPfxPassword);
                         });
                     })
                     .Configure(app =>
                     {
-                        if(enableApiRateLimiting)
+                        if (enableApiRateLimiting)
                             app.UseIpRateLimiting();
 
                         app.UseMiddleware<ApiExceptionHandlingMiddleware>();
@@ -228,9 +228,9 @@ public class Program : BackgroundService
                             "/metrics"
                         }, clusterConfig.Api?.MetricsIpWhitelist);
 
-                        #if DEBUG
+#if DEBUG
                         app.UseOpenApi();
-                        #endif
+#endif
 
                         app.UseResponseCompression();
                         app.UseCors(corsPolicyBuilder => corsPolicyBuilder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
@@ -255,38 +255,38 @@ public class Program : BackgroundService
             await host.RunAsync();
         }
 
-        catch(PoolStartupException ex)
+        catch (PoolStartupException ex)
         {
-            if(!string.IsNullOrEmpty(ex.Message))
+            if (!string.IsNullOrEmpty(ex.Message))
                 await Console.Error.WriteLineAsync(ex.Message);
 
             await Console.Error.WriteLineAsync("\nCluster cannot start. Good Bye!");
         }
 
-        catch(JsonException)
+        catch (JsonException)
         {
             // ignored
         }
 
-        catch(IOException)
+        catch (IOException)
         {
             // ignored
         }
 
-        catch(AggregateException ex)
+        catch (AggregateException ex)
         {
-            if(ex.InnerExceptions.First() is not PoolStartupException)
+            if (ex.InnerExceptions.First() is not PoolStartupException)
                 Console.Error.WriteLine(ex);
 
             await Console.Error.WriteLineAsync("Cluster cannot start. Good Bye!");
         }
 
-        catch(OperationCanceledException)
+        catch (OperationCanceledException)
         {
             // Ctrl+C
         }
 
-        catch(Exception ex)
+        catch (Exception ex)
         {
             Console.Error.WriteLine(ex);
 
@@ -300,7 +300,7 @@ public class Program : BackgroundService
         services.AddHostedService<BtStreamReceiver>();
 
         // Share processing
-        if(clusterConfig.ShareRelay == null)
+        if (clusterConfig.ShareRelay == null)
         {
             services.AddHostedService<ShareRecorder>();
             services.AddHostedService<ShareReceiver>();
@@ -310,17 +310,17 @@ public class Program : BackgroundService
             services.AddHostedService<ShareRelay>();
 
         // API
-        if(clusterConfig.Api == null || clusterConfig.Api.Enabled)
+        if (clusterConfig.Api == null || clusterConfig.Api.Enabled)
             services.AddHostedService<MetricsPublisher>();
 
         // Payment processing
-        if(clusterConfig.PaymentProcessing?.Enabled == true &&
+        if (clusterConfig.PaymentProcessing?.Enabled == true &&
            clusterConfig.Pools.Any(x => x.PaymentProcessing?.Enabled == true))
             services.AddHostedService<PayoutManager>();
         else
             logger.Info("Payment processing is not enabled");
 
-        if(clusterConfig.ShareRelay == null)
+        if (clusterConfig.ShareRelay == null)
         {
             // Pool stats
             services.AddHostedService<StatsRecorder>();
@@ -363,13 +363,13 @@ public class Program : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
-        if(isShareRecoveryMode)
+        if (isShareRecoveryMode)
         {
             await RecoverSharesAsync(shareRecoveryOption.Value());
             return;
         }
 
-        if(clusterConfig.InstanceId.HasValue)
+        if (clusterConfig.InstanceId.HasValue)
             logger.Info($"This is cluster node {clusterConfig.InstanceId.Value}{(!string.IsNullOrEmpty(clusterConfig.ClusterName) ? $" [{clusterConfig.ClusterName}]" : string.Empty)}");
 
         var coinTemplates = LoadCoinTemplates();
@@ -379,20 +379,20 @@ public class Program : BackgroundService
             .Where(config => config.Enabled)
             .Select(config => RunPool(config, coinTemplates, ct));
 
-        await Guard(()=> Task.WhenAll(tasks), ex =>
+        await Guard(() => Task.WhenAll(tasks), ex =>
         {
-            switch(ex)
+            switch (ex)
             {
                 case PoolStartupException pse:
-                {
-                    var _logger = pse.PoolId != null ? LogUtil.GetPoolScopedLogger(GetType(), pse.PoolId) : logger;
-                    _logger.Error(() => $"{pse.Message}");
+                    {
+                        var _logger = pse.PoolId != null ? LogUtil.GetPoolScopedLogger(GetType(), pse.PoolId) : logger;
+                        _logger.Error(() => $"{pse.Message}");
 
-                    logger.Error(() => "Cluster cannot start. Good Bye!");
+                        logger.Error(() => "Cluster cannot start. Good Bye!");
 
-                    hal.StopApplication();
-                    break;
-                }
+                        hal.StopApplication();
+                        break;
+                    }
 
                 default:
                     throw ex;
@@ -403,7 +403,7 @@ public class Program : BackgroundService
     private async Task RunPool(PoolConfig poolConfig, Dictionary<string, CoinTemplate> coinTemplates, CancellationToken ct)
     {
         // Lookup coin
-        if(!coinTemplates.TryGetValue(poolConfig.Coin, out var template))
+        if (!coinTemplates.TryGetValue(poolConfig.Coin, out var template))
             throw new PoolStartupException($"Pool {poolConfig.Id} references undefined coin '{poolConfig.Coin}'", poolConfig.Id);
 
         poolConfig.Template = template;
@@ -437,28 +437,39 @@ public class Program : BackgroundService
     private static string GetVersion()
     {
         var assembly = Assembly.GetEntryAssembly();
-        var gitVersionInformationType = assembly.GetType("GitVersionInformation");
+        var infoVersion = assembly?
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+            .InformationalVersion;
 
-        if(gitVersionInformationType != null)
-        {
-            var assemblySemVer = gitVersionInformationType.GetField("AssemblySemVer").GetValue(null);
-            var branchName = gitVersionInformationType.GetField("BranchName").GetValue(null);
-            var sha = gitVersionInformationType.GetField("Sha").GetValue(null);
-
-            return $"{assemblySemVer}-{branchName} [{sha}]";
-        }
-
-        else
-            return "unknown";
+        return string.IsNullOrWhiteSpace(infoVersion) ? "1.0.0" : infoVersion;
     }
+
+    /*
+        private static string GetVersion()
+        {
+            var assembly = Assembly.GetEntryAssembly();
+            var gitVersionInformationType = assembly.GetType("GitVersionInformation");
+
+            if (gitVersionInformationType != null)
+            {
+                var assemblySemVer = gitVersionInformationType.GetField("AssemblySemVer").GetValue(null);
+                var branchName = gitVersionInformationType.GetField("BranchName").GetValue(null);
+                var sha = gitVersionInformationType.GetField("Sha").GetValue(null);
+
+                return $"{assemblySemVer}-{branchName} [{sha}]";
+            }
+
+            else
+                return "unknown";
+        }*/
 
     private static void ValidateConfig()
     {
-        if(!clusterConfig.Pools.Any(x => x.Enabled))
+        if (!clusterConfig.Pools.Any(x => x.Enabled))
             throw new PoolStartupException("No pools are enabled.");
 
         // set some defaults
-        foreach(var config in clusterConfig.Pools)
+        foreach (var config in clusterConfig.Pools)
         {
             config.EnableInternalStratum ??= clusterConfig.ShareRelays == null || clusterConfig.ShareRelays.Length == 0;
         }
@@ -467,26 +478,26 @@ public class Program : BackgroundService
         {
             clusterConfig.Validate();
 
-            if(clusterConfig.Notifications?.Admin?.Enabled == true)
+            if (clusterConfig.Notifications?.Admin?.Enabled == true)
             {
-                if(string.IsNullOrEmpty(clusterConfig.Notifications?.Email?.FromName))
+                if (string.IsNullOrEmpty(clusterConfig.Notifications?.Email?.FromName))
                     throw new PoolStartupException($"Notifications are enabled but email sender name is not configured (notifications.email.fromName)");
 
-                if(string.IsNullOrEmpty(clusterConfig.Notifications?.Email?.FromAddress))
+                if (string.IsNullOrEmpty(clusterConfig.Notifications?.Email?.FromAddress))
                     throw new PoolStartupException($"Notifications are enabled but email sender address name is not configured (notifications.email.fromAddress)");
 
-                if(string.IsNullOrEmpty(clusterConfig.Notifications?.Admin?.EmailAddress))
+                if (string.IsNullOrEmpty(clusterConfig.Notifications?.Admin?.EmailAddress))
                     throw new PoolStartupException($"Admin notifications are enabled but recipient address is not configured (notifications.admin.emailAddress)");
             }
 
-            if(string.IsNullOrEmpty(clusterConfig.Logging.LogFile))
+            if (string.IsNullOrEmpty(clusterConfig.Logging.LogFile))
             {
                 // emit a newline before regular logging output starts
                 Console.WriteLine();
             }
         }
 
-        catch(ValidationException ex)
+        catch (ValidationException ex)
         {
             Console.Error.WriteLine($"Configuration is not valid:\n\n{string.Join("\n", ex.Errors.Select(x => "=> " + x.ErrorMessage))}");
             throw new PoolStartupException(string.Empty);
@@ -521,9 +532,9 @@ public class Program : BackgroundService
 
         var schema = generator.Generate(typeof(ClusterConfig));
 
-        using(var stream = File.Create(filename))
+        using (var stream = File.Create(filename))
         {
-            using(var writer = new JsonTextWriter(new StreamWriter(stream, Encoding.UTF8)))
+            using (var writer = new JsonTextWriter(new StreamWriter(stream, Encoding.UTF8)))
             {
                 schema.WriteTo(writer);
 
@@ -543,7 +554,7 @@ public class Program : BackgroundService
 
         versionOption = app.Option("-v|--version", "Version Information", CommandOptionType.NoValue);
         configFileOption = app.Option("-c|--config <configfile>", "Configuration File", CommandOptionType.SingleValue);
-        dumpConfigOption = app.Option("-dc|--dumpconfig", "Dump the configuration (useful for trouble-shooting typos in the config file)",CommandOptionType.NoValue);
+        dumpConfigOption = app.Option("-dc|--dumpconfig", "Dump the configuration (useful for trouble-shooting typos in the config file)", CommandOptionType.NoValue);
         shareRecoveryOption = app.Option("-rs", "Import lost shares using existing recovery file", CommandOptionType.SingleValue);
         generateSchemaOption = app.Option("-gcs|--generate-config-schema <outputfile>", "Generate JSON schema from configuration options", CommandOptionType.SingleValue);
         app.HelpOption("-? | -h | --help");
@@ -564,13 +575,13 @@ public class Program : BackgroundService
                 ContractResolver = new CamelCasePropertyNamesContractResolver()
             });
 
-            using(var reader = new StreamReader(file, Encoding.UTF8))
+            using (var reader = new StreamReader(file, Encoding.UTF8))
             {
-                using(var jsonReader = new JsonTextReader(reader))
+                using (var jsonReader = new JsonTextReader(reader))
                 {
-                    using(var validatingReader = new JSchemaValidatingReader(jsonReader)
+                    using (var validatingReader = new JSchemaValidatingReader(jsonReader)
                     {
-                        Schema =  LoadSchema()
+                        Schema = LoadSchema()
                     })
                     {
                         return serializer.Deserialize<ClusterConfig>(validatingReader);
@@ -579,22 +590,22 @@ public class Program : BackgroundService
             }
         }
 
-        catch(JSchemaValidationException ex)
+        catch (JSchemaValidationException ex)
         {
             throw new PoolStartupException($"Configuration file error: {ex.Message}");
         }
 
-        catch(JsonSerializationException ex)
+        catch (JsonSerializationException ex)
         {
             throw new PoolStartupException($"Configuration file error: {ex.Message}");
         }
 
-        catch(JsonException ex)
+        catch (JsonException ex)
         {
             throw new PoolStartupException($"Configuration file error: {ex.Message}");
         }
 
-        catch(IOException ex)
+        catch (IOException ex)
         {
             throw new PoolStartupException($"Configuration file error: {ex.Message}");
         }
@@ -605,7 +616,7 @@ public class Program : BackgroundService
         var basePath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
         var path = Path.Combine(basePath, "config.schema.json");
 
-        using(var reader = new JsonTextReader(new StreamReader(File.OpenRead(path))))
+        using (var reader = new JsonTextReader(new StreamReader(File.OpenRead(path))))
         {
             return JSchema.Load(reader);
         }
@@ -614,11 +625,11 @@ public class Program : BackgroundService
     private static void ValidateRuntimeEnvironment()
     {
         // root check
-        if(!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && Environment.UserName == "root")
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && Environment.UserName == "root")
             logger.Warn(() => "Running as root is discouraged!");
 
         // require 64-bit on Windows
-        if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && RuntimeInformation.ProcessArchitecture == Architecture.X86)
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && RuntimeInformation.ProcessArchitecture == Architecture.X86)
             throw new PoolStartupException("Miningcore requires 64-Bit Windows");
     }
 
@@ -655,7 +666,7 @@ public class Program : BackgroundService
         var config = clusterConfig.Logging;
         var loggingConfig = new LoggingConfiguration();
 
-        if(config != null)
+        if (config != null)
         {
             // parse level
             var level = !string.IsNullOrEmpty(config.Level)
@@ -675,7 +686,7 @@ public class Program : BackgroundService
             loggingConfig.AddRule(level, NLog.LogLevel.Fatal, nullTarget, "Microsoft.Extensions.Hosting.Internal.*", true);
 
             // Api Log
-            if(!string.IsNullOrEmpty(config.ApiLogFile) && !isShareRecoveryMode)
+            if (!string.IsNullOrEmpty(config.ApiLogFile) && !isShareRecoveryMode)
             {
                 var target = new FileTarget("file")
                 {
@@ -688,9 +699,9 @@ public class Program : BackgroundService
                 loggingConfig.AddRule(level, NLog.LogLevel.Fatal, target, "Microsoft.AspNetCore.*", true);
             }
 
-            if(config.EnableConsoleLog || isShareRecoveryMode)
+            if (config.EnableConsoleLog || isShareRecoveryMode)
             {
-                if(config.EnableConsoleColors)
+                if (config.EnableConsoleColors)
                 {
                     var target = new ColoredConsoleTarget("console")
                     {
@@ -737,7 +748,7 @@ public class Program : BackgroundService
                 }
             }
 
-            if(!string.IsNullOrEmpty(config.LogFile) && !isShareRecoveryMode)
+            if (!string.IsNullOrEmpty(config.LogFile) && !isShareRecoveryMode)
             {
                 var target = new FileTarget("file")
                 {
@@ -750,9 +761,9 @@ public class Program : BackgroundService
                 loggingConfig.AddRule(level, NLog.LogLevel.Fatal, target);
             }
 
-            if(config.PerPoolLogFile && !isShareRecoveryMode)
+            if (config.PerPoolLogFile && !isShareRecoveryMode)
             {
-                foreach(var poolConfig in clusterConfig.Pools)
+                foreach (var poolConfig in clusterConfig.Pools)
                 {
                     var target = new FileTarget(poolConfig.Id)
                     {
@@ -774,7 +785,7 @@ public class Program : BackgroundService
 
     private static Layout GetLogPath(ClusterLoggingConfig config, string name)
     {
-        if(string.IsNullOrEmpty(config.LogBaseDirectory))
+        if (string.IsNullOrEmpty(config.LogBaseDirectory))
             return name;
 
         return Path.Combine(config.LogBaseDirectory, name);
@@ -804,7 +815,7 @@ public class Program : BackgroundService
 
         // Configure Etchash
         Miningcore.Crypto.Hashing.Ethash.Etchash.Cache.messageBus = messageBus;
-        
+
         // Configure Ethashb3
         Miningcore.Crypto.Hashing.Ethash.Ethashb3.Cache.messageBus = messageBus;
 
@@ -844,7 +855,7 @@ public class Program : BackgroundService
 
         // Configure Firopow
         Miningcore.Crypto.Hashing.Progpow.Firopow.Cache.messageBus = messageBus;
-        
+
         // Configure Kawpow
         Miningcore.Crypto.Hashing.Progpow.Kawpow.Cache.messageBus = messageBus;
 
@@ -866,30 +877,30 @@ public class Program : BackgroundService
 
     private static async Task ConfigurePostgresCompatibilityOptions(IServiceProvider services)
     {
-        if(clusterConfig.Persistence?.Postgres == null)
+        if (clusterConfig.Persistence?.Postgres == null)
             return;
 
         var cf = services.GetService<IConnectionFactory>();
 
         bool enableLegacyTimestampBehavior = false;
 
-        if(!clusterConfig.Persistence.Postgres.EnableLegacyTimestamps.HasValue)
+        if (!clusterConfig.Persistence.Postgres.EnableLegacyTimestamps.HasValue)
         {
             // check if 'shares.created' is legacy timestamp (without timezone)
             var columnType = await GetPostgresColumnType(cf, "shares", "created");
 
-            if(columnType != null)
+            if (columnType != null)
                 enableLegacyTimestampBehavior = columnType.ToLower().Contains("without time zone");
             else
-                logger.Warn(() => "Unable to auto-detect Npgsql Legacy Timestamp Behavior. Please set 'EnableLegacyTimestamps' in your Miningcore Database configuration to'true' or 'false' to bypass auto-detection in case of problems");
+                logger.Warn(() => "Unable to auto-detect Npgsql Legacy Timestamp Behavior. Please set 'EnableLegacyTimestamps' in your Miningcore database configuration to 'true' or 'false' to bypass auto-detection in case of problems");
         }
 
         else
             enableLegacyTimestampBehavior = clusterConfig.Persistence.Postgres.EnableLegacyTimestamps.Value;
 
-        if(enableLegacyTimestampBehavior)
+        if (enableLegacyTimestampBehavior)
         {
-            logger.Info(()=> "Enabling Npgsql Legacy Timestamp Behavior");
+            logger.Info(() => "Enabling Npgsql Legacy Timestamp Behavior");
 
             AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
         }
@@ -904,12 +915,12 @@ public class Program : BackgroundService
 
     private static void ConfigurePersistence(ContainerBuilder builder)
     {
-        if(clusterConfig.Persistence == null &&
+        if (clusterConfig.Persistence == null &&
            clusterConfig.PaymentProcessing?.Enabled == true &&
            clusterConfig.ShareRelay == null)
             throw new PoolStartupException("Persistence is not configured!");
 
-        if(clusterConfig.Persistence?.Postgres != null)
+        if (clusterConfig.Persistence?.Postgres != null)
             ConfigurePostgres(clusterConfig.Persistence.Postgres, builder);
         else
             ConfigureDummyPersistence(builder);
@@ -918,41 +929,41 @@ public class Program : BackgroundService
     private static void ConfigurePostgres(PostgresConfig pgConfig, ContainerBuilder builder)
     {
         // validate config
-        if(string.IsNullOrEmpty(pgConfig.Host))
+        if (string.IsNullOrEmpty(pgConfig.Host))
             throw new PoolStartupException("Postgres configuration: invalid or missing 'host'");
 
-        if(pgConfig.Port == 0)
+        if (pgConfig.Port == 0)
             throw new PoolStartupException("Postgres configuration: invalid or missing 'port'");
 
-        if(string.IsNullOrEmpty(pgConfig.Database))
+        if (string.IsNullOrEmpty(pgConfig.Database))
             throw new PoolStartupException("Postgres configuration: invalid or missing 'database'");
 
-        if(string.IsNullOrEmpty(pgConfig.User))
+        if (string.IsNullOrEmpty(pgConfig.User))
             throw new PoolStartupException("Postgres configuration: invalid or missing 'user'");
 
         // build connection string
         var connectionString = new StringBuilder($"Server={pgConfig.Host};Port={pgConfig.Port};Database={pgConfig.Database};User Id={pgConfig.User};Password={pgConfig.Password};");
 
-        if(pgConfig.Tls)
+        if (pgConfig.Tls)
         {
             connectionString.Append("SSL Mode=Require;");
 
-            if(pgConfig.TlsNoValidate)
+            if (pgConfig.TlsNoValidate)
                 connectionString.Append("Trust Server Certificate=true;");
 
-            if(!string.IsNullOrEmpty(pgConfig.TlsCert?.Trim()))
+            if (!string.IsNullOrEmpty(pgConfig.TlsCert?.Trim()))
                 connectionString.Append($"SSL Certificate={pgConfig.TlsCert.Trim()};");
 
-            if(!string.IsNullOrEmpty(pgConfig.TlsKey?.Trim()))
+            if (!string.IsNullOrEmpty(pgConfig.TlsKey?.Trim()))
                 connectionString.Append($"SSL Key={pgConfig.TlsKey.Trim()};");
 
-            if(!string.IsNullOrEmpty(pgConfig.TlsPassword))
+            if (!string.IsNullOrEmpty(pgConfig.TlsPassword))
                 connectionString.Append($"SSL Password={pgConfig.TlsPassword};");
         }
 
         connectionString.Append($"CommandTimeout={pgConfig.CommandTimeout ?? 300};");
 
-        logger.Debug(()=> $"Using postgres connection string: {connectionString}");
+        logger.Debug(() => $"Using postgres connection string: {connectionString}");
 
         // register connection factory
         builder.RegisterInstance(new PgConnectionFactory(connectionString.ToString()))
@@ -998,20 +1009,20 @@ public class Program : BackgroundService
     private static void UseIpWhiteList(IApplicationBuilder app, bool defaultToLoopback, string[] locations, string[] whitelist)
     {
         var ipList = whitelist?.Select(IPAddress.Parse).ToList();
-        if(defaultToLoopback && (ipList == null || ipList.Count == 0))
+        if (defaultToLoopback && (ipList == null || ipList.Count == 0))
             ipList = new List<IPAddress>(new[]
             {
                 IPAddress.Loopback, IPAddress.IPv6Loopback, IPUtils.IPv4LoopBackOnIPv6
             });
 
-        if(ipList.Count > 0)
+        if (ipList.Count > 0)
         {
             // always allow access by localhost
-            if(!ipList.Any(x => x.Equals(IPAddress.Loopback)))
+            if (!ipList.Any(x => x.Equals(IPAddress.Loopback)))
                 ipList.Add(IPAddress.Loopback);
-            if(!ipList.Any(x => x.Equals(IPAddress.IPv6Loopback)))
+            if (!ipList.Any(x => x.Equals(IPAddress.IPv6Loopback)))
                 ipList.Add(IPAddress.IPv6Loopback);
-            if(!ipList.Any(x => x.Equals(IPUtils.IPv4LoopBackOnIPv6)))
+            if (!ipList.Any(x => x.Equals(IPUtils.IPv4LoopBackOnIPv6)))
                 ipList.Add(IPUtils.IPv4LoopBackOnIPv6);
 
             logger.Info(() => $"API Access to {string.Join(",", locations)} restricted to {string.Join(",", ipList.Select(x => x.ToString()))}");
@@ -1035,7 +1046,7 @@ public class Program : BackgroundService
         options.IpWhitelist = clusterConfig.Api?.RateLimiting?.IpWhitelist?.ToList();
 
         // default to whitelist localhost if whitelist absent
-        if(options.IpWhitelist == null || options.IpWhitelist.Count == 0)
+        if (options.IpWhitelist == null || options.IpWhitelist.Count == 0)
         {
             options.IpWhitelist = new List<string>
             {
@@ -1048,7 +1059,7 @@ public class Program : BackgroundService
         // limits
         var rules = clusterConfig.Api?.RateLimiting?.Rules?.ToList();
 
-        if(rules == null || rules.Count == 0)
+        if (rules == null || rules.Count == 0)
         {
             rules = new List<RateLimitRule>
             {
@@ -1080,7 +1091,7 @@ public class Program : BackgroundService
 
     private static void OnAppDomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
     {
-        if(logger != null)
+        if (logger != null)
         {
             logger.Error(e.ExceptionObject);
             LogManager.Flush(TimeSpan.Zero);

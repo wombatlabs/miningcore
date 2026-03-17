@@ -1,3 +1,4 @@
+// src/Miningcore/Api/ApiException.cs
 using System.Net;
 
 namespace Miningcore.Api;

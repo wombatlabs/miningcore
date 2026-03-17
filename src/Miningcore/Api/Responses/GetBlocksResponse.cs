@@ -1,3 +1,4 @@
+// src/Miningcore/Api/Responses/GetBlocksResponse.cs
 namespace Miningcore.Api.Responses;
 
 public class Block

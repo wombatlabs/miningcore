@@ -1,3 +1,4 @@
+// src/Miningcore/Api/Responses/GetAdminStatsResponse.cs
 namespace Miningcore.Api.Responses;
 
 public class AdminGcStats

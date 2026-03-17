@@ -1,11 +1,15 @@
+// src/Miningcore/Blockchain/Equihash/EquihashJobManager.cs
+
 using System.Globalization;
 using Autofac;
 using Miningcore.Blockchain.Bitcoin;
 using Miningcore.Blockchain.Bitcoin.DaemonResponses;
 using Miningcore.Blockchain.Equihash.Custom.BitcoinGold;
+using Miningcore.Blockchain.Equihash.Custom.BitcoinZ;
 using Miningcore.Blockchain.Equihash.Custom.Minexcoin;
 using Miningcore.Blockchain.Equihash.Custom.Piratechain;
 using Miningcore.Blockchain.Equihash.Custom.Veruscoin;
+//using Miningcore.Blockchain.Equihash.Custom.Ycash;
 using Miningcore.Blockchain.Equihash.DaemonResponses;
 using Miningcore.Configuration;
 using Miningcore.Contracts;
@@ -50,7 +54,7 @@ public class EquihashJobManager : BitcoinJobManagerBase<EquihashJob>
     private async Task<RpcResponse<EquihashBlockTemplate>> GetBlockTemplateAsync(CancellationToken ct)
     {
         var subsidyResponse = await rpc.ExecuteAsync<ZCashBlockSubsidy>(logger, BitcoinCommands.GetBlockSubsidy, ct);
-        
+
         var result = await rpc.ExecuteAsync<EquihashBlockTemplate>(logger,
             BitcoinCommands.GetBlockTemplate, ct, extraPoolConfig?.GBTArgs ?? (object) GetBlockTemplateParams());
 
@@ -58,7 +62,7 @@ public class EquihashJobManager : BitcoinJobManagerBase<EquihashJob>
             result.Response.Subsidy = subsidyResponse.Response;
         else if(subsidyResponse.Error?.Code != (int) BitcoinRPCErrorCode.RPC_METHOD_NOT_FOUND)
             result = new RpcResponse<EquihashBlockTemplate>(null, new JsonRpcError(-1, $"{BitcoinCommands.GetBlockSubsidy} failed", null));
-        
+
         return result;
     }
 
@@ -92,13 +96,20 @@ public class EquihashJobManager : BitcoinJobManagerBase<EquihashJob>
 
             case "MNX":
                 return new MinexcoinJob();
-            
+
             case "VRSC":
                 return new VeruscoinJob();
+
+            case "BTCZ":
+                return new BitcoinZJob();
+
+            //case "YCASH":
+                //return new YcashJob();
         }
 
         return new EquihashJob();
     }
+
 
     protected override async Task<(bool IsNew, bool Force)> UpdateJob(CancellationToken ct, bool forceUpdate, string via = null, string json = null)
     {
@@ -203,20 +214,20 @@ public class EquihashJobManager : BitcoinJobManagerBase<EquihashJob>
     {
         if(string.IsNullOrEmpty(address))
             return false;
-        
+
         // handle t-addr
         if(await base.ValidateAddressAsync(address, ct))
             return true;
-        
+
         if(!coin.UseBitcoinPayoutHandler)
         {
             // handle z-addr
             var result = await rpc.ExecuteAsync<ValidateAddressResponse>(logger,
                 EquihashCommands.ZValidateAddress, ct, new[] { address });
 
-            return result.Response is {IsValid: true};
+            return result.Response is { IsValid: true };
         }
-        
+
         return false;
     }
 
@@ -279,9 +290,9 @@ public class EquihashJobManager : BitcoinJobManagerBase<EquihashJob>
         if(share.IsBlockCandidate)
         {
             logger.Info(() => $"Submitting block {share.BlockHeight} [{share.BlockHash}]");
-            
+
             SubmitResult acceptResponse;
-            
+
             switch(coin.Symbol)
             {
                 case "VRSC":
@@ -289,13 +300,13 @@ public class EquihashJobManager : BitcoinJobManagerBase<EquihashJob>
                     var solutionVersion = job.BlockTemplate.Solution.Substring(0, 8);
                     var reversedSolutionVersion = uint.Parse(solutionVersion.HexToReverseByteArray().ToHexString(), NumberStyles.HexNumber);
                     var isPBaaSActive = (reversedSolutionVersion > 6);
-                    
+
                     acceptResponse = await SubmitVeruscoinBlockAsync(share, blockHex, isPBaaSActive, ct);
-                    
+
                     break;
                 default:
                     acceptResponse = await SubmitBlockAsync(share, blockHex, ct);
-                    
+
                     break;
             }
 
@@ -333,11 +344,11 @@ public class EquihashJobManager : BitcoinJobManagerBase<EquihashJob>
 
         return share;
     }
-    
+
     protected async Task<SubmitResult> SubmitVeruscoinBlockAsync(Share share, string blockHex, bool isPBaaSActive, CancellationToken ct)
     {
         var requestCommand = isPBaaSActive ? VeruscoinCommands.SubmitMergedBlock : BitcoinCommands.SubmitBlock;
-        var batch = new []
+        var batch = new[]
         {
             new RpcRequest(requestCommand, new[] { blockHex }),
             new RpcRequest(BitcoinCommands.GetBlock, new[] { share.BlockHash })

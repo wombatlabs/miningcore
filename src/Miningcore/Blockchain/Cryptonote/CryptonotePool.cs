@@ -49,12 +49,12 @@ public class CryptonotePool : PoolBase
         var request = tsRequest.Value;
         var context = connection.ContextAs<CryptonoteWorkerContext>();
 
-        if(request.Id == null)
+        if (request.Id == null)
             throw new StratumException(StratumError.MinusOne, "missing request id");
 
         var loginRequest = request.ParamsAs<CryptonoteLoginRequest>();
 
-        if(string.IsNullOrEmpty(loginRequest?.Login))
+        if (string.IsNullOrEmpty(loginRequest?.Login))
             throw new StratumException(StratumError.MinusOne, "missing login");
 
         // extract worker/miner/paymentid
@@ -67,12 +67,12 @@ public class CryptonotePool : PoolBase
 
         // extract paymentid
         var index = context.Miner.IndexOf('#');
-        if(index != -1)
+        if (index != -1)
         {
             var paymentId = context.Miner[(index + 1)..].Trim();
 
             // validate
-            if(!string.IsNullOrEmpty(paymentId) && paymentId.Length != CryptonoteConstants.PaymentIdHexLength)
+            if (!string.IsNullOrEmpty(paymentId) && paymentId.Length != CryptonoteConstants.PaymentIdHexLength)
                 throw new StratumException(StratumError.MinusOne, "invalid payment id");
 
             // re-append to address
@@ -86,7 +86,7 @@ public class CryptonotePool : PoolBase
         context.IsSubscribed = result;
         context.IsAuthorized = result;
 
-        if(context.IsAuthorized)
+        if (context.IsAuthorized)
         {
             // extract control vars from password
             var passParts = loginRequest.Password?.Split(PasswordControlVarsSeparator);
@@ -95,9 +95,9 @@ public class CryptonotePool : PoolBase
             // Nicehash support
             var nicehashDiff = await GetNicehashStaticMinDiff(context, manager.Coin.Name, manager.Coin.GetAlgorithmName());
 
-            if(nicehashDiff.HasValue)
+            if (nicehashDiff.HasValue)
             {
-                if(!staticDiff.HasValue || nicehashDiff > staticDiff)
+                if (!staticDiff.HasValue || nicehashDiff > staticDiff)
                 {
                     logger.Info(() => $"[{connection.ConnectionId}] Nicehash detected. Using API supplied difficulty of {nicehashDiff.Value}");
 
@@ -109,7 +109,7 @@ public class CryptonotePool : PoolBase
             }
 
             // Static diff
-            if(staticDiff.HasValue &&
+            if (staticDiff.HasValue &&
                (context.VarDiff != null && staticDiff.Value >= context.VarDiff.Config.MinDiff ||
                    context.VarDiff == null && staticDiff.Value > context.Difficulty))
             {
@@ -131,7 +131,7 @@ public class CryptonotePool : PoolBase
             // [Respect the goddamn standards Nicehack :(]
             var response = new JsonRpcResponse<object>(loginResponse, request.Id);
 
-            if(context.IsNicehash || poolConfig.EnableAsicBoost == true)
+            if (context.IsNicehash || poolConfig.EnableAsicBoost == true)
             {
                 response.Extra = new Dictionary<string, object>();
                 response.Extra["error"] = null;
@@ -140,7 +140,7 @@ public class CryptonotePool : PoolBase
             await connection.RespondAsync(response);
 
             // log association
-            if(!string.IsNullOrEmpty(context.Worker))
+            if (!string.IsNullOrEmpty(context.Worker))
                 logger.Info(() => $"[{connection.ConnectionId}] Authorized worker {context.Worker}@{context.Miner}");
             else
                 logger.Info(() => $"[{connection.ConnectionId}] Authorized miner {context.Miner}");
@@ -150,7 +150,7 @@ public class CryptonotePool : PoolBase
         {
             await connection.RespondErrorAsync(StratumError.MinusOne, "invalid login", request.Id);
 
-            if(clusterConfig?.Banning?.BanOnLoginFailure is null or true)
+            if (clusterConfig?.Banning?.BanOnLoginFailure is null or true)
             {
                 logger.Info(() => $"[{connection.ConnectionId}] Banning unauthorized worker {context.Miner} for {loginFailureBanTimeout.TotalSeconds} sec");
 
@@ -166,13 +166,13 @@ public class CryptonotePool : PoolBase
         var request = tsRequest.Value;
         var context = connection.ContextAs<CryptonoteWorkerContext>();
 
-        if(request.Id == null)
+        if (request.Id == null)
             throw new StratumException(StratumError.MinusOne, "missing request id");
 
         var getJobRequest = request.ParamsAs<CryptonoteGetJobRequest>();
 
         // validate worker
-        if(connection.ConnectionId != getJobRequest?.WorkerId || !context.IsAuthorized)
+        if (connection.ConnectionId != getJobRequest?.WorkerId || !context.IsAuthorized)
             throw new StratumException(StratumError.MinusOne, "unauthorized");
 
         var job = CreateWorkerJob(connection);
@@ -182,7 +182,7 @@ public class CryptonotePool : PoolBase
         // [Respect the goddamn standards Nicehack :(]
         var response = new JsonRpcResponse<object>(job, request.Id);
 
-        if(context.IsNicehash || poolConfig.EnableAsicBoost == true)
+        if (context.IsNicehash || poolConfig.EnableAsicBoost == true)
         {
             response.Extra = new Dictionary<string, object>();
             response.Extra["error"] = null;
@@ -200,7 +200,7 @@ public class CryptonotePool : PoolBase
         manager.PrepareWorkerJob(job, out var blob, out var target);
 
         // should never happen
-        if(string.IsNullOrEmpty(blob) || string.IsNullOrEmpty(target))
+        if (string.IsNullOrEmpty(blob) || string.IsNullOrEmpty(target))
             return null;
 
         var result = new CryptonoteJobParams
@@ -212,11 +212,11 @@ public class CryptonotePool : PoolBase
             SeedHash = job.SeedHash,
         };
 
-        if(!string.IsNullOrEmpty(minerAlgo))
+        if (!string.IsNullOrEmpty(minerAlgo))
             result.Algorithm = minerAlgo;
 
         // update context
-        lock(context)
+        lock (context)
         {
             context.AddJob(job, 4);
         }
@@ -231,17 +231,17 @@ public class CryptonotePool : PoolBase
 
         try
         {
-            if(request.Id == null)
+            if (request.Id == null)
                 throw new StratumException(StratumError.MinusOne, "missing request id");
 
             // authorized worker
-            if(!context.IsAuthorized)
+            if (!context.IsAuthorized)
                 throw new StratumException(StratumError.MinusOne, "unauthorized");
 
             // check age of submission (aged submissions are usually caused by high server load)
             var requestAge = clock.Now - tsRequest.Timestamp.UtcDateTime;
 
-            if(requestAge > maxShareAge)
+            if (requestAge > maxShareAge)
             {
                 logger.Warn(() => $"[{connection.ConnectionId}] Dropping stale share submission request (server overloaded?)");
                 return;
@@ -251,7 +251,7 @@ public class CryptonotePool : PoolBase
             var submitRequest = request.ParamsAs<CryptonoteSubmitShareRequest>();
 
             // validate worker
-            if(connection.ConnectionId != submitRequest?.WorkerId)
+            if (connection.ConnectionId != submitRequest?.WorkerId)
                 throw new StratumException(StratumError.MinusOne, "cheater");
 
             // recognize activity
@@ -259,16 +259,16 @@ public class CryptonotePool : PoolBase
 
             CryptonoteWorkerJob job;
 
-            lock(context)
+            lock (context)
             {
                 var jobId = submitRequest?.JobId;
 
-                if((job = context.GetJob(jobId)) == null)
+                if ((job = context.GetJob(jobId)) == null)
                     throw new StratumException(StratumError.MinusOne, "invalid jobid");
             }
 
             // dupe check
-            if(!job.Submissions.TryAdd(submitRequest.Nonce, true))
+            if (!job.Submissions.TryAdd(submitRequest.Nonce, true))
                 throw new StratumException(StratumError.MinusOne, "duplicate share");
 
             // submit
@@ -279,7 +279,7 @@ public class CryptonotePool : PoolBase
             // [Respect the goddamn standards Nicehack :(]
             var response = new JsonRpcResponse<object>(new CryptonoteResponseBase(), request.Id);
 
-            if(context.IsNicehash || poolConfig.EnableAsicBoost == true)
+            if (context.IsNicehash || poolConfig.EnableAsicBoost == true)
             {
                 response.Extra = new Dictionary<string, object>();
                 response.Extra["error"] = null;
@@ -296,7 +296,7 @@ public class CryptonotePool : PoolBase
             logger.Info(() => $"[{connection.ConnectionId}] Share accepted: D={Math.Round(share.Difficulty, 3)}");
 
             // update pool stats
-            if(share.IsBlockCandidate)
+            if (share.IsBlockCandidate)
                 poolStats.LastPoolBlockTime = clock.Now;
 
             // update client stats
@@ -305,7 +305,7 @@ public class CryptonotePool : PoolBase
             await UpdateVarDiffAsync(connection, false, ct);
         }
 
-        catch(StratumException ex)
+        catch (StratumException ex)
         {
             // telemetry
             PublishTelemetry(TelemetryCategory.Share, clock.Now - tsRequest.Timestamp.UtcDateTime, false);
@@ -347,14 +347,14 @@ public class CryptonotePool : PoolBase
 
         await manager.StartAsync(ct);
 
-        if(poolConfig.EnableInternalStratum == true)
+        if (poolConfig.EnableInternalStratum == true)
         {
             minerAlgo = GetMinerAlgo();
 
             disposables.Add(manager.Blocks
                 .Select(_ => Observable.FromAsync(() =>
                     Guard(OnNewJobAsync,
-                        ex=> logger.Debug(() => $"{nameof(OnNewJobAsync)}: {ex.Message}"))))
+                        ex => logger.Debug(() => $"{nameof(OnNewJobAsync)}: {ex.Message}"))))
                 .Concat()
                 .Subscribe(_ => { }, ex =>
                 {
@@ -374,17 +374,21 @@ public class CryptonotePool : PoolBase
 
     private string GetMinerAlgo()
     {
-        switch(manager.Coin.Hash)
+        // Tell miners which algo string to use based on the coin's hash type.
+        // RandomX families expect "rx/<variant>"; other custom hashes can be the enum name lowercased.
+        switch (manager.Coin.Hash)
         {
             case CryptonightHashType.RandomX:
                 return $"rx/{manager.Coin.HashVariant}";
+
             case CryptonightHashType.Panthera:
             case CryptonightHashType.RandomXSCash:
-                return $"{manager.Coin.Hash.ToString().ToLower()}";
+                return manager.Coin.Hash.ToString().ToLower();
         }
 
         return null;
     }
+
 
     protected override async Task InitStatsAsync(CancellationToken ct)
     {
@@ -406,7 +410,7 @@ public class CryptonotePool : PoolBase
 
         try
         {
-            switch(request.Method)
+            switch (request.Method)
             {
                 case CryptonoteStratumMethods.Login:
                     await OnLoginAsync(connection, tsRequest);
@@ -423,17 +427,17 @@ public class CryptonotePool : PoolBase
                 case CryptonoteStratumMethods.KeepAlive:
                     // recognize activity
                     context.LastActivity = clock.Now;
-                    
+
                     // For some reasons, we would never send a reply here :/
                     // But the official XMRig documentation is explicit, we should reply: https://xmrig.com/docs/extensions/keepalive
-                    // XMRig is such a gift, i wish more mining pool operators value open-source, the same way the XMRig devs do
+                    // XMRig is such a gift, i wish more mining pool operators were like them and valued open-source, the same way the XMRig devs do
 
                     // Nicehash's stupid validator insists on "error" property present
                     // in successful responses which is a violation of the JSON-RPC spec
                     // [Respect the goddamn standards Nicehack :(]
                     var response = new JsonRpcResponse<object>(new CryptonoteKeepAliveResponse(), request.Id);
 
-                    if(context.IsNicehash || poolConfig.EnableAsicBoost == true)
+                    if (context.IsNicehash || poolConfig.EnableAsicBoost == true)
                     {
                         response.Extra = new Dictionary<string, object>();
                         response.Extra["error"] = null;
@@ -450,7 +454,7 @@ public class CryptonotePool : PoolBase
             }
         }
 
-        catch(StratumException ex)
+        catch (StratumException ex)
         {
             await connection.RespondErrorAsync(ex.Code, ex.Message, request.Id, false);
         }
@@ -468,7 +472,7 @@ public class CryptonotePool : PoolBase
     {
         await base.OnVarDiffUpdateAsync(connection, newDiff, ct);
 
-        if(connection.Context.ApplyPendingDifficulty())
+        if (connection.Context.ApplyPendingDifficulty())
         {
             // re-send job
             var job = CreateWorkerJob(connection);

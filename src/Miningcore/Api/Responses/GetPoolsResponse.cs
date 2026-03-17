@@ -1,68 +1,77 @@
+// src/Miningcore/Api/Responses/GetPoolsResponse.cs
+using System.Text.Json; // para JsonElement
 using System.Text.Json.Serialization;
 using Miningcore.Blockchain;
 using Miningcore.Configuration;
 using Miningcore.Mining;
-using Newtonsoft.Json.Linq;
 
 namespace Miningcore.Api.Responses;
 
+// Coin metadata exposed via API
 public class ApiCoinConfig
 {
     public string Type { get; set; }
     public string Name { get; set; }
     public string Symbol { get; set; }
 
-    [System.Text.Json.Serialization.JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string Website { get; set; }
 
-    [System.Text.Json.Serialization.JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string Market { get; set; }
 
-    [System.Text.Json.Serialization.JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string Family { get; set; }
 
-    [System.Text.Json.Serialization.JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string Algorithm { get; set; }
 
-    [System.Text.Json.Serialization.JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string Twitter { get; set; }
 
-    [System.Text.Json.Serialization.JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string Discord { get; set; }
 
-    [System.Text.Json.Serialization.JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string Telegram { get; set; }
 
-    [System.Text.Json.Serialization.JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string Github { get; set; }
 
-    [System.Text.Json.Serialization.JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string CanonicalName { get; set; }
 }
 
 public class ApiPoolPayoutSchemeConfig
 {
-    [System.Text.Json.Serialization.JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public decimal? Factor { get; set; } = 2.0m;
 
-    [System.Text.Json.Serialization.JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public decimal? BlockFinderPercentage { get; set; } = 5.0m;
 }
 
 public class ApiPoolPaymentProcessingConfig
 {
     public bool Enabled { get; set; }
-    public decimal MinimumPayment { get; set; } // in pool-base-currency (ie. Bitcoin, not Satoshis)
+
+    // In pool base currency (e.g. BTC, not sats)
+    public decimal MinimumPayment { get; set; }
+
     public string PayoutScheme { get; set; }
+
+    // strongly-typed view model
     public ApiPoolPayoutSchemeConfig PayoutSchemeConfig { get; set; }
 
-    [Newtonsoft.Json.JsonExtensionData]
-    public IDictionary<string, object> Extra { get; set; }
+    // Keep passthrough for any extra fields from pool config (System.Text.Json)
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement> Extra { get; set; } = new();
 }
 
+// Aggregated pool info returned from API
 public partial class PoolInfo
 {
-    // Configuration Properties directly mapping to PoolConfig (omitting security relevant fields)
+    // Configuration (non-sensitive)
     public string Id { get; set; }
 
     public ApiCoinConfig Coin { get; set; }
@@ -78,15 +87,17 @@ public partial class PoolInfo
 
     // Stats
     public PoolStats PoolStats { get; set; }
-
     public BlockchainStats NetworkStats { get; set; }
     public MinerPerformanceStats[] TopMiners { get; set; }
+
     public decimal TotalPaid { get; set; }
     public uint TotalBlocks { get; set; }
     public uint TotalConfirmedBlocks { get; set; }
     public uint TotalPendingBlocks { get; set; }
     public decimal BlockReward { get; set; }
     public DateTime? LastPoolBlockTime { get; set; }
+
+    // Filled when available (see controllers)
     public double PoolEffort { get; set; }
 }
 

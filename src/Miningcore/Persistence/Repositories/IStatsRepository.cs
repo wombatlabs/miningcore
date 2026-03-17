@@ -1,3 +1,4 @@
+// src/Miningcore/Persistence/Repositories/IStatsRepository.cs
 using System.Data;
 using Miningcore.Persistence.Model;
 using Miningcore.Persistence.Model.Projections;
@@ -29,4 +30,15 @@ public interface IStatsRepository
     Task<int> DeleteMinerStatsBeforeAsync(IDbConnection con, DateTime date, CancellationToken ct);
     Task<uint> GetMinerTotalConfirmedBlocksAsync(IDbConnection con, string poolId, string miner, CancellationToken ct);
     Task<uint> GetMinerTotalPendingBlocksAsync(IDbConnection con, string poolId, string miner, CancellationToken ct);
+
+    /// <summary>
+    /// Bulk fetch of miner stats for multiple addresses in a pool.
+    /// The result is keyed by miner address (case-insensitive).
+    /// Only fields required by live endpoints need to be populated.
+    /// </summary>
+    Task<IDictionary<string, MinerStats>> GetMinerStatsBulkAsync(
+        IDbConnection con,
+        string poolId,
+        IReadOnlyCollection<string> miners,
+        CancellationToken ct);
 }

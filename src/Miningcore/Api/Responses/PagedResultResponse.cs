@@ -1,3 +1,4 @@
+// src/Miningcore/Api/Responses/PagedResultResponse.cs
 namespace Miningcore.Api.Responses;
 
 public class PagedResultResponse<T> : ResultResponse<T>

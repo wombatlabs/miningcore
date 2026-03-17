@@ -1,3 +1,4 @@
+// src/Miningcore/Api/Middlewares/ApiExceptionHandlingMiddleware.cs
 using Microsoft.AspNetCore.Http;
 
 namespace Miningcore.Api.Middlewares;

@@ -93,9 +93,9 @@ public class AutofacModule : Module
         builder.RegisterAssemblyTypes(ThisAssembly)
             .Where(t => t.GetCustomAttributes<IdentifierAttribute>().Any() &&
                 t.GetInterfaces().Any(i => i.IsAssignableFrom(typeof(IHashAlgorithm))))
-            .Named<IHashAlgorithm>(t=> t.GetCustomAttributes<IdentifierAttribute>().First().Name)
+            .Named<IHashAlgorithm>(t => t.GetCustomAttributes<IdentifierAttribute>().First().Name)
             .PropertiesAutowired();
-        
+
         builder.RegisterAssemblyTypes(ThisAssembly)
             .Where(t => t.GetCustomAttributes<IdentifierAttribute>().Any() &&
                 t.GetInterfaces().Any(i => i.IsAssignableFrom(typeof(IEthashLight))))
@@ -174,17 +174,17 @@ public class AutofacModule : Module
         builder.RegisterType<PROPPaymentScheme>()
             .Keyed<IPayoutScheme>(PayoutScheme.PROP)
             .SingleInstance();
-        
+
         //////////////////////
         // Alephium
 
         builder.RegisterType<AlephiumJobManager>();
-        
+
         //////////////////////
         // Beam
 
         builder.RegisterType<BeamJobManager>();
-        
+
         //////////////////////
         // Bitcoin and family
 
@@ -194,7 +194,7 @@ public class AutofacModule : Module
         // Conceal
 
         builder.RegisterType<ConcealJobManager>();
-        
+
         //////////////////////
         // Cryptonote
 
@@ -219,7 +219,7 @@ public class AutofacModule : Module
         // Handshake
 
         builder.RegisterType<HandshakeJobManager>();
-        
+
         //////////////////////
         // Kaspa
 
@@ -229,7 +229,7 @@ public class AutofacModule : Module
         // Nexa
 
         builder.RegisterType<NexaJobManager>();
-        
+
         //////////////////////
         // Progpow
 
@@ -254,6 +254,13 @@ public class AutofacModule : Module
         // Zano
 
         builder.RegisterType<ZanoJobManager>();
+
+        //////////////////////
+        // MiningPoolRegistry: single instance, auto-start to attach bus listener
+        builder.RegisterType<MiningPoolRegistry>()
+            .AsSelf()
+            .SingleInstance()
+            .AutoActivate();
 
         base.Load(builder);
     }

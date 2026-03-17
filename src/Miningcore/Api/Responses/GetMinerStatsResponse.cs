@@ -1,3 +1,4 @@
+// src/Miningcore/Api/Responses/GetMinerStatsResponse.cs
 namespace Miningcore.Api.Responses;
 
 public class MinerPerformanceStats
