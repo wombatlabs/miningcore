@@ -490,6 +490,7 @@ public class PoolApiController : ApiControllerBase
                         workerStats.ValidShares = live.ValidShares;
                         workerStats.InvalidShares = live.InvalidShares;
                         workerStats.StaleShares = live.StaleShares;
+                        workerStats.Difficulty = live.Difficulty;
                     }
                 }
             }

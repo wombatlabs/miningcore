@@ -18,6 +18,7 @@ public class WorkerPerformanceStats
     public int? ValidShares { get; set; }
     public int? InvalidShares { get; set; }
     public int? StaleShares { get; set; }
+    public double? Difficulty { get; set; }
 }
 
 public class WorkerPerformanceStatsContainer

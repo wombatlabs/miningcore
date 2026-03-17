@@ -114,6 +114,9 @@ public abstract class PoolBase : StratumServer,
                 stats.InvalidShares += context.Stats.InvalidShares;
                 stats.StaleShares += context.Stats.StaleShares;
             }
+
+            if(!stats.Difficulty.HasValue || context.Difficulty > stats.Difficulty.Value)
+                stats.Difficulty = context.Difficulty;
         }
 
         return new List<WorkerShareStats>(result.Values);
