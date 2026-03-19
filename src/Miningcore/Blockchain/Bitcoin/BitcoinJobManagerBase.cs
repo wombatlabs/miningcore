@@ -576,7 +576,15 @@ public abstract class BitcoinJobManagerBase<TJob> : JobManagerBase<TJob>
                 return BitcoinUtils.BechSegwitAddressToDestination(poolConfig.Address, network, extraPoolConfig?.BechPrefix);
 
             case BitcoinAddressType.BCash:
-                return BitcoinUtils.BCashAddressToDestination(poolConfig.Address, network);
+                try
+                {
+                    return BitcoinUtils.CashAddrToDestination(poolConfig.Address, extraPoolConfig?.CashAddrPrefix);
+                }
+                catch(FormatException)
+                {
+                    // fall back to legacy BCH parsing for backwards compatibility
+                    return BitcoinUtils.BCashAddressToDestination(poolConfig.Address, network);
+                }
 
             case BitcoinAddressType.Litecoin:
                 return BitcoinUtils.LitecoinAddressToDestination(poolConfig.Address, network);
