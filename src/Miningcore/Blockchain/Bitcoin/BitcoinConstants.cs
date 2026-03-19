@@ -19,6 +19,11 @@ public enum BitcoinAddressType
     /// Bitcoin Cash
     /// </summary>
     BCash,
+
+    /// <summary>
+    /// CashAddr (custom prefix)
+    /// </summary>
+    CashAddr,
     
     /// <summary>
     /// Litecoin
