@@ -86,7 +86,8 @@ public class EthereumPool : PoolBase
             {
                 new object[]
                 {
-                    new object[] { EthereumStratumMethods.MiningNotify, connection.ConnectionId }
+                    new object[] { EthereumStratumMethods.MiningNotify, connection.ConnectionId },
+                    new object[] { EthereumStratumMethods.SetDifficulty, connection.ConnectionId }
                 },
                 context.ExtraNonce1,
                 extraNonce2Size
@@ -187,9 +188,8 @@ public class EthereumPool : PoolBase
             }
             else
             {
-                var targetHex = EthereumJob.GetTargetHex(context.Difficulty);
-                await connection.NotifyAsync(EthereumStratumMethods.SetTarget, new object[] { targetHex });
-                await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStandardStratum(targetHex));
+                await connection.NotifyAsync(EthereumStratumMethods.SetDifficulty, new object[] { context.Difficulty });
+                await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStratum());
             }
 
             logger.Info(() => $"[{connection.ConnectionId}] Authorized worker {workerValue}");
@@ -319,26 +319,12 @@ public class EthereumPool : PoolBase
     {
         // varDiff: if the client has a pending difficulty change, apply it now
         if(context.ApplyPendingDifficulty())
-        {
-            if(useNicehashStratumV2)
-                await connection.NotifyAsync(EthereumStratumMethods.SetDifficulty, new object[] { context.Difficulty });
-            else
-            {
-                var targetHex = EthereumJob.GetTargetHex(context.Difficulty);
-                await connection.NotifyAsync(EthereumStratumMethods.SetTarget, new object[] { targetHex });
-            }
-        }
+            await connection.NotifyAsync(EthereumStratumMethods.SetDifficulty, new object[] { context.Difficulty });
 
         var ethereumJob = CreateWorkerJob(connection);
 
         // send job
-        if(useNicehashStratumV2)
-            await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStratum());
-        else
-        {
-            var targetHex = EthereumJob.GetTargetHex(context.Difficulty);
-            await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStandardStratum(targetHex));
-        }
+        await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStratum());
     }
 
     #endregion // Protocol V2 handlers
