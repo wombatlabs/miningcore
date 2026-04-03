@@ -1,3 +1,4 @@
+using System;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Threading.Tasks;
@@ -40,6 +41,7 @@ public class EthereumPool : PoolBase
     private EthereumJobManager manager;
     private EthereumCoinTemplate coin;
     private EthereumPoolConfigExtra extraPoolConfig;
+    private bool useNicehashStratumV2 = true;
 
     #region // Protocol V2 handlers - https://github.com/nicehash/Specifications/blob/master/EthereumStratum_NiceHash_v1.0.0.txt
 
@@ -60,17 +62,36 @@ public class EthereumPool : PoolBase
 
         context.UserAgent = requestParams.FirstOrDefault()?.Trim();
 
-        var data = new object[]
+        object[] data;
+
+        if(useNicehashStratumV2)
         {
-            new object[]
+            data = new object[]
             {
-                EthereumStratumMethods.MiningNotify,
-                connection.ConnectionId,
-                EthereumConstants.EthereumStratumVersion
-            },
-            context.ExtraNonce1
+                new object[]
+                {
+                    EthereumStratumMethods.MiningNotify,
+                    connection.ConnectionId,
+                    EthereumConstants.EthereumStratumVersion
+                },
+                context.ExtraNonce1
+            };
         }
-        .ToArray();
+        else
+        {
+            var extraNonce1Bytes = context.ExtraNonce1.Length / 2;
+            var extraNonce2Size = Math.Max(0, EthereumConstants.EthashNonceSize - extraNonce1Bytes);
+
+            data = new object[]
+            {
+                new object[]
+                {
+                    new object[] { EthereumStratumMethods.MiningNotify, connection.ConnectionId }
+                },
+                context.ExtraNonce1,
+                extraNonce2Size
+            };
+        }
 
         // Nicehash's stupid validator insists on "error" property present
         // in successful responses which is a violation of the JSON-RPC spec
@@ -159,8 +180,17 @@ public class EthereumPool : PoolBase
 
             var ethereumJob = CreateWorkerJob(connection);
 
-            await connection.NotifyAsync(EthereumStratumMethods.SetDifficulty, new object[] { context.Difficulty });
-            await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStratum());
+            if(useNicehashStratumV2)
+            {
+                await connection.NotifyAsync(EthereumStratumMethods.SetDifficulty, new object[] { context.Difficulty });
+                await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStratum());
+            }
+            else
+            {
+                var targetHex = EthereumJob.GetTargetHex(context.Difficulty);
+                await connection.NotifyAsync(EthereumStratumMethods.SetTarget, new object[] { targetHex });
+                await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStandardStratum(targetHex));
+            }
 
             logger.Info(() => $"[{connection.ConnectionId}] Authorized worker {workerValue}");
         }
@@ -221,8 +251,8 @@ public class EthereumPool : PoolBase
             // check request
             var submitRequest = request.ParamsAs<string[]>();
 
-            if(submitRequest.Length != 3 ||
-               submitRequest.Any(string.IsNullOrEmpty))
+            if(submitRequest.Length < 3 ||
+               submitRequest.Take(3).Any(string.IsNullOrEmpty))
                 throw new StratumException(StratumError.MinusOne, "malformed PoW result");
 
             // recognize activity
@@ -289,12 +319,26 @@ public class EthereumPool : PoolBase
     {
         // varDiff: if the client has a pending difficulty change, apply it now
         if(context.ApplyPendingDifficulty())
-            await connection.NotifyAsync(EthereumStratumMethods.SetDifficulty, new object[] { context.Difficulty });
+        {
+            if(useNicehashStratumV2)
+                await connection.NotifyAsync(EthereumStratumMethods.SetDifficulty, new object[] { context.Difficulty });
+            else
+            {
+                var targetHex = EthereumJob.GetTargetHex(context.Difficulty);
+                await connection.NotifyAsync(EthereumStratumMethods.SetTarget, new object[] { targetHex });
+            }
+        }
 
         var ethereumJob = CreateWorkerJob(connection);
 
         // send job
-        await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStratum());
+        if(useNicehashStratumV2)
+            await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStratum());
+        else
+        {
+            var targetHex = EthereumJob.GetTargetHex(context.Difficulty);
+            await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStandardStratum(targetHex));
+        }
     }
 
     #endregion // Protocol V2 handlers
@@ -431,6 +475,8 @@ public class EthereumPool : PoolBase
     {
         coin = pc.Template.As<EthereumCoinTemplate>();
         extraPoolConfig = pc.Extra.SafeExtensionDataAs<EthereumPoolConfigExtra>();
+        useNicehashStratumV2 = string.IsNullOrWhiteSpace(extraPoolConfig?.EthashStratumV2Mode) ||
+            extraPoolConfig.EthashStratumV2Mode.Equals("nicehash", StringComparison.OrdinalIgnoreCase);
 
         base.Configure(pc, cc);
     }

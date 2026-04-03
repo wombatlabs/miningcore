@@ -33,6 +33,11 @@ public static class EthereumStratumMethods
     public const string SetDifficulty = "mining.set_difficulty";
 
     /// <summary>
+    /// Used to signal the miner to update share target (ethash stratum v2).
+    /// </summary>
+    public const string SetTarget = "mining.set_target";
+
+    /// <summary>
     /// Used to subscribe to work from a server, required before all other communication.
     /// </summary>
     public const string ExtraNonceSubscribe = "mining.extranonce.subscribe";

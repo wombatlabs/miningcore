@@ -16,6 +16,7 @@ public class EthereumConstants
     public const decimal StaticTransactionFeeReserve = 0.0025m; // in ETH
     public const string BlockTypeUncle = "uncle";
     public const string BlockTypeBlock = "block";
+    public const int EthashNonceSize = 8; // bytes
 
 #if !DEBUG
     public const int MinPayoutPeerCount = 1;

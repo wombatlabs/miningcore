@@ -25,6 +25,12 @@ public class EthereumPoolConfigExtra
     public bool EnableEthashStratumV1 { get; set; } = false;
 
     /// <summary>
+    /// Ethash Stratum V2 mode: "nicehash" (default) or "standard".
+    /// Standard mode avoids Nicehash-style handshake for compatibility with some proxies (e.g. MRR).
+    /// </summary>
+    public string EthashStratumV2Mode { get; set; } = "nicehash";
+
+    /// <summary>
     /// getWork stream published via ZMQ
     /// </summary>
     public ZmqPubSubEndpointConfig BtStream { get; set; }
