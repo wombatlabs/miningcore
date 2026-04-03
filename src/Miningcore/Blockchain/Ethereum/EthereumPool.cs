@@ -191,7 +191,14 @@ public class EthereumPool : PoolBase
             var ethereumJob = CreateWorkerJob(connection);
 
             await connection.NotifyAsync(EthereumStratumMethods.SetDifficulty, new object[] { context.Difficulty });
-            await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStratum());
+
+            if(context.UseNicehashStratumV2)
+                await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStratum());
+            else
+            {
+                var targetHex = EthereumJob.GetTargetHex(context.Difficulty);
+                await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStandardStratum(targetHex));
+            }
 
             logger.Info(() => $"[{connection.ConnectionId}] Authorized worker {workerValue}");
         }
@@ -325,7 +332,13 @@ public class EthereumPool : PoolBase
         var ethereumJob = CreateWorkerJob(connection);
 
         // send job
-        await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStratum());
+        if(context.UseNicehashStratumV2)
+            await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStratum());
+        else
+        {
+            var targetHex = EthereumJob.GetTargetHex(context.Difficulty);
+            await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStandardStratum(targetHex));
+        }
     }
 
     #endregion // Protocol V2 handlers
