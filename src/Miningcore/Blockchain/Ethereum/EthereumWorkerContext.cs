@@ -23,6 +23,11 @@ public class EthereumWorkerContext : WorkerContextBase
     public int ProtocolVersion { get; set; }
 
     /// <summary>
+    /// Whether to use Nicehash-style Stratum V2 for this connection
+    /// </summary>
+    public bool UseNicehashStratumV2 { get; set; } = true;
+
+    /// <summary>
     /// Unique value assigned per worker
     /// </summary>
     public string ExtraNonce1 { get; set; }

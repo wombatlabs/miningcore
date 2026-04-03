@@ -62,9 +62,15 @@ public class EthereumPool : PoolBase
 
         context.UserAgent = requestParams.FirstOrDefault()?.Trim();
 
+        // Default to configured mode, but override for MRR to avoid Nicehash-style v2
+        context.UseNicehashStratumV2 = useNicehashStratumV2;
+        if(!string.IsNullOrEmpty(context.UserAgent) &&
+           context.UserAgent.Contains("MiningRigRentals", StringComparison.OrdinalIgnoreCase))
+            context.UseNicehashStratumV2 = false;
+
         object[] data;
 
-        if(useNicehashStratumV2)
+        if(context.UseNicehashStratumV2)
         {
             data = new object[]
             {
@@ -181,7 +187,7 @@ public class EthereumPool : PoolBase
 
             var ethereumJob = CreateWorkerJob(connection);
 
-            if(useNicehashStratumV2)
+            if(context.UseNicehashStratumV2)
             {
                 await connection.NotifyAsync(EthereumStratumMethods.SetDifficulty, new object[] { context.Difficulty });
                 await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStratum());
@@ -324,7 +330,13 @@ public class EthereumPool : PoolBase
         var ethereumJob = CreateWorkerJob(connection);
 
         // send job
-        await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStratum());
+        if(context.UseNicehashStratumV2)
+            await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStratum());
+        else
+        {
+            // Standard v2 for MRR: send without Nicehash tag
+            await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStratum());
+        }
     }
 
     #endregion // Protocol V2 handlers

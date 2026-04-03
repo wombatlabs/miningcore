@@ -138,18 +138,6 @@ public class EthereumJob
         };
     }
 
-    public virtual object[] GetJobParamsForStandardStratum(string workerTargetHex)
-    {
-        return new object[]
-        {
-            Id,
-            BlockTemplate.Header.StripHexPrefix(),
-            BlockTemplate.Seed.StripHexPrefix(),
-            workerTargetHex,
-            true
-        };
-    }
-
     public virtual object[] GetWorkParamsForStratum(EthereumWorkerContext context)
     {
         // https://github.com/edsonayllon/Stratum-Implementation-For-Pantheon
@@ -162,11 +150,5 @@ public class EthereumJob
             BlockTemplate.Seed,
             workerTargetString,
         };
-    }
-
-    public static string GetTargetHex(double difficulty, bool withPrefix = false)
-    {
-        var workerTarget = BigInteger.Divide(EthereumConstants.BigMaxValue, new BigInteger(difficulty * EthereumConstants.Pow2x32));
-        return workerTarget.ToByteArray(false, true).ToHexString(withPrefix);
     }
 }
