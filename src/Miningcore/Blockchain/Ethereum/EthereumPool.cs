@@ -62,46 +62,21 @@ public class EthereumPool : PoolBase
 
         context.UserAgent = requestParams.FirstOrDefault()?.Trim();
 
-        // Default to configured mode, but override for MRR to avoid Nicehash-style v2
-        context.UseNicehashStratumV2 = useNicehashStratumV2;
-        if(!string.IsNullOrEmpty(context.UserAgent) &&
-           context.UserAgent.Contains("MiningRigRentals", StringComparison.OrdinalIgnoreCase))
-        {
-            context.UseNicehashStratumV2 = false;
-            context.UseMrrV2Compat = true;
-        }
+        // Detect MRR for "error": null compatibility
+        context.UseMrrV2Compat = !string.IsNullOrEmpty(context.UserAgent) &&
+            context.UserAgent.Contains("MiningRigRentals", StringComparison.OrdinalIgnoreCase);
 
-        object[] data;
-
-        if(context.UseNicehashStratumV2)
+        // MRR's "V2" IS EthereumStratum/1.0.0 format (same as Nicehash subscribe)
+        var data = new object[]
         {
-            data = new object[]
+            new object[]
             {
-                new object[]
-                {
-                    EthereumStratumMethods.MiningNotify,
-                    connection.ConnectionId,
-                    EthereumConstants.EthereumStratumVersion
-                },
-                context.ExtraNonce1
-            };
-        }
-        else
-        {
-            var extraNonce1Bytes = context.ExtraNonce1.Length / 2;
-            var extraNonce2Size = Math.Max(0, EthereumConstants.EthashNonceSize - extraNonce1Bytes);
-
-            data = new object[]
-            {
-                new object[]
-                {
-                    new object[] { EthereumStratumMethods.SetDifficulty, connection.ConnectionId },
-                    new object[] { EthereumStratumMethods.MiningNotify, connection.ConnectionId }
-                },
-                context.ExtraNonce1,
-                extraNonce2Size
-            };
-        }
+                EthereumStratumMethods.MiningNotify,
+                connection.ConnectionId,
+                EthereumConstants.EthereumStratumVersion
+            },
+            context.ExtraNonce1
+        };
 
         // Nicehash's stupid validator insists on "error" property present
         // in successful responses which is a violation of the JSON-RPC spec
@@ -191,14 +166,7 @@ public class EthereumPool : PoolBase
             var ethereumJob = CreateWorkerJob(connection);
 
             await connection.NotifyAsync(EthereumStratumMethods.SetDifficulty, new object[] { context.Difficulty });
-
-            if(context.UseNicehashStratumV2)
-                await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStratum());
-            else
-            {
-                var targetHex = EthereumJob.GetTargetHex(context.Difficulty);
-                await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStandardStratum(targetHex));
-            }
+            await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStratum());
 
             logger.Info(() => $"[{connection.ConnectionId}] Authorized worker {workerValue}");
         }
@@ -332,13 +300,7 @@ public class EthereumPool : PoolBase
         var ethereumJob = CreateWorkerJob(connection);
 
         // send job
-        if(context.UseNicehashStratumV2)
-            await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStratum());
-        else
-        {
-            var targetHex = EthereumJob.GetTargetHex(context.Difficulty);
-            await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStandardStratum(targetHex));
-        }
+        await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStratum());
     }
 
     #endregion // Protocol V2 handlers
