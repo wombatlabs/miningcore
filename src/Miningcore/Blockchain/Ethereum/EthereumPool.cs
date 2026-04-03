@@ -144,7 +144,7 @@ public class EthereumPool : PoolBase
         // [We miss you Oliver <3 We miss you so much <3 Respect the goddamn standards Nicehash :(]
         var response = new JsonRpcResponse<object>(context.IsAuthorized, request.Id);
 
-        if(context.IsNicehash || poolConfig.EnableAsicBoost == true)
+        if(context.IsNicehash || poolConfig.EnableAsicBoost == true || context.UseMrrV2Compat)
         {
             response.Extra = new Dictionary<string, object>();
             response.Extra["error"] = null;
