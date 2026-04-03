@@ -28,6 +28,11 @@ public class EthereumWorkerContext : WorkerContextBase
     public bool UseNicehashStratumV2 { get; set; } = true;
 
     /// <summary>
+    /// Whether to use MRR-compatible Stratum V2 job params
+    /// </summary>
+    public bool UseMrrV2Compat { get; set; } = false;
+
+    /// <summary>
     /// Unique value assigned per worker
     /// </summary>
     public string ExtraNonce1 { get; set; }

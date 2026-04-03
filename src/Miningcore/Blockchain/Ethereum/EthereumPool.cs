@@ -66,7 +66,10 @@ public class EthereumPool : PoolBase
         context.UseNicehashStratumV2 = useNicehashStratumV2;
         if(!string.IsNullOrEmpty(context.UserAgent) &&
            context.UserAgent.Contains("MiningRigRentals", StringComparison.OrdinalIgnoreCase))
+        {
             context.UseNicehashStratumV2 = false;
+            context.UseMrrV2Compat = true;
+        }
 
         object[] data;
 
@@ -187,14 +190,21 @@ public class EthereumPool : PoolBase
 
             var ethereumJob = CreateWorkerJob(connection);
 
-            if(context.UseNicehashStratumV2)
+            await connection.NotifyAsync(EthereumStratumMethods.SetDifficulty, new object[] { context.Difficulty });
+
+            if(context.UseMrrV2Compat)
             {
-                await connection.NotifyAsync(EthereumStratumMethods.SetDifficulty, new object[] { context.Difficulty });
-                await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStratum());
+                var jobParams = new object[]
+                {
+                    ethereumJob.Id,
+                    ethereumJob.BlockTemplate.Header,
+                    ethereumJob.BlockTemplate.Seed,
+                    true
+                };
+                await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, jobParams);
             }
             else
             {
-                await connection.NotifyAsync(EthereumStratumMethods.SetDifficulty, new object[] { context.Difficulty });
                 await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStratum());
             }
 
@@ -335,8 +345,20 @@ public class EthereumPool : PoolBase
         else
         {
             // Standard v2 for MRR: send without Nicehash tag
-            await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStratum());
+        if(context.UseMrrV2Compat)
+        {
+            var jobParams = new object[]
+            {
+                ethereumJob.Id,
+                ethereumJob.BlockTemplate.Header,
+                ethereumJob.BlockTemplate.Seed,
+                true
+            };
+            await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, jobParams);
         }
+        else
+            await connection.NotifyAsync(EthereumStratumMethods.MiningNotify, ethereumJob.GetJobParamsForStratum());
+    }
     }
 
     #endregion // Protocol V2 handlers
