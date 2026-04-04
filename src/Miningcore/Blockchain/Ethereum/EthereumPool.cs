@@ -554,6 +554,23 @@ public class EthereumPool : PoolBase
             {
                 // V2/Nicehash Stratum Methods
                 case EthereumStratumMethods.Subscribe:
+                    // MRR only supports eth-proxy (esm1) for ETC — disconnect on mining.subscribe
+                    // so MRR's auto-detect falls back to eth_submitLogin.
+                    // Any stratum response (even an error) is treated as valid esm2 by MRR.
+                    if(extraPoolConfig?.EnableEthashStratumV1 == true)
+                    {
+                        var subscribeParams = request.ParamsAs<string[]>();
+                        var agent = subscribeParams?.FirstOrDefault()?.Trim();
+
+                        if(!string.IsNullOrEmpty(agent) &&
+                           agent.Contains("MiningRigRentals", StringComparison.OrdinalIgnoreCase))
+                        {
+                            logger.Info(() => $"[{connection.ConnectionId}] MRR detected — disconnecting to force eth-proxy (esm1)");
+                            Disconnect(connection);
+                            return;
+                        }
+                    }
+
                     context.ProtocolVersion = 2;    // lock in protocol version
 
                     await OnSubscribeAsync(connection, tsRequest);
