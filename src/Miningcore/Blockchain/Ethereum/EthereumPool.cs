@@ -60,14 +60,6 @@ public class EthereumPool : PoolBase
 
         context.UserAgent = requestParams.FirstOrDefault()?.Trim();
 
-        // MRR rigs use eth-proxy (esm 1,2) — reject mining.subscribe so MRR falls back to eth_submitLogin
-        if(extraPoolConfig?.EnableEthashStratumV1 == true &&
-           !string.IsNullOrEmpty(context.UserAgent) &&
-           context.UserAgent.Contains("MiningRigRentals", StringComparison.OrdinalIgnoreCase))
-        {
-            throw new StratumException(StratumError.Other, $"Unsupported request {request.Method}");
-        }
-
         manager.PrepareWorker(connection);
 
         object[] data;
