@@ -611,8 +611,10 @@ public class EthereumPool : PoolBase
                     }
                     else
                     {
-                        EnsureProtocolVersion(context, 1);
-                        
+                        // Allow V1 methods on V2 connections (MRR subscribes via V2 then uses V1 methods)
+                        if(context.ProtocolVersion != 1)
+                            context.ProtocolVersion = 1;
+
                         logger.Warn(() => $"Use of Ethash Stratum V1 method: {request.Method}");
                         await OnGetWorkAsync(connection, tsRequest);
                     }
@@ -627,8 +629,10 @@ public class EthereumPool : PoolBase
                     }
                     else
                     {
-                        EnsureProtocolVersion(context, 1);
-                        
+                        // Allow V1 methods on V2 connections (MRR subscribes via V2 then uses V1 methods)
+                        if(context.ProtocolVersion != 1)
+                            context.ProtocolVersion = 1;
+
                         logger.Warn(() => $"Use of Ethash Stratum V1 method: {request.Method}");
                         await OnSubmitAsync(connection, tsRequest, ct, true);
                     }
