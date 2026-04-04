@@ -58,25 +58,51 @@ public class EthereumPool : PoolBase
         if(requestParams == null || requestParams.Length < 2 || requestParams.Any(string.IsNullOrEmpty))
             throw new StratumException(StratumError.MinusOne, "invalid request");
 
-        manager.PrepareWorker(connection);
-
         context.UserAgent = requestParams.FirstOrDefault()?.Trim();
 
-        // Detect MRR for "error": null compatibility
-        context.UseMrrV2Compat = !string.IsNullOrEmpty(context.UserAgent) &&
-            context.UserAgent.Contains("MiningRigRentals", StringComparison.OrdinalIgnoreCase);
-
-        // MRR's "V2" IS EthereumStratum/1.0.0 format (same as Nicehash subscribe)
-        var data = new object[]
+        // MRR rigs use eth-proxy (esm 1,2) — reject mining.subscribe so MRR falls back to eth_submitLogin
+        if(extraPoolConfig?.EnableEthashStratumV1 == true &&
+           !string.IsNullOrEmpty(context.UserAgent) &&
+           context.UserAgent.Contains("MiningRigRentals", StringComparison.OrdinalIgnoreCase))
         {
-            new object[]
+            throw new StratumException(StratumError.Other, $"Unsupported request {request.Method}");
+        }
+
+        manager.PrepareWorker(connection);
+
+        object[] data;
+
+        if(context.UseMrrV2Compat)
+        {
+            // Standard stratum subscribe (without EthereumStratum/1.0.0 marker)
+            var extraNonce1Bytes = context.ExtraNonce1.Length / 2;
+            var extraNonce2Size = Math.Max(0, EthereumConstants.EthashNonceSize - extraNonce1Bytes);
+
+            data = new object[]
             {
-                EthereumStratumMethods.MiningNotify,
-                connection.ConnectionId,
-                EthereumConstants.EthereumStratumVersion
-            },
-            context.ExtraNonce1
-        };
+                new object[]
+                {
+                    new object[] { EthereumStratumMethods.SetDifficulty, connection.ConnectionId },
+                    new object[] { EthereumStratumMethods.MiningNotify, connection.ConnectionId }
+                },
+                context.ExtraNonce1,
+                extraNonce2Size
+            };
+        }
+        else
+        {
+            // Nicehash/EthereumStratum/1.0.0 subscribe
+            data = new object[]
+            {
+                new object[]
+                {
+                    EthereumStratumMethods.MiningNotify,
+                    connection.ConnectionId,
+                    EthereumConstants.EthereumStratumVersion
+                },
+                context.ExtraNonce1
+            };
+        }
 
         // Nicehash's stupid validator insists on "error" property present
         // in successful responses which is a violation of the JSON-RPC spec
