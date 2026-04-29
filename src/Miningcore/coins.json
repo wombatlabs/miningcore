@@ -1993,6 +1993,35 @@
         "explorerTxLink": "https://chainz.cryptoid.info/moon/tx.dws?{0}.htm",
         "explorerAccountLink": "https://chainz.cryptoid.info/moon/address.dws?{0}.htm"
     },
+    "mytherra": {
+        "name": "Mytherra",
+        "canonicalName": "Mytherra",
+        "symbol": "MYT",
+        "family": "bitcoin",
+        "website": "https://www.mytherrablockchain.org/",
+        "github": "https://github.com/MYTHERRA/Mytherra-source",
+        "market": "https://www.coingecko.com/en/coins/mytherra",
+        "twitter": "https://x.com/mytherra_sha256",
+        "telegram": "",
+        "discord": "",
+        "coinbaseHasher": {
+            "hash": "sha256d"
+        },
+        "headerHasher": {
+            "hash": "sha256d"
+        },
+        "blockHasher": {
+            "hash": "reverse",
+            "args": [
+                {
+                    "hash": "sha256d"
+                }
+            ]
+        },
+        "explorerBlockLink": "https://explorerspace.mytherrablockchain.org/block/$height$",
+        "explorerTxLink": "https://explorerspace.mytherrablockchain.org/tx/{0}",
+        "explorerAccountLink": "https://explorerspace.mytherrablockchain.org/address/{0}"
+    },
     "namecoin": {
         "name": "Namecoin",
         "canonicalName": "Namecoin",
