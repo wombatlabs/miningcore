@@ -258,6 +258,10 @@ public class BitcoinJobManager : BitcoinJobManagerBase<BitcoinJob>
 
         var context = worker.ContextAs<BitcoinWorkerContext>();
 
+        var expectedParamCount = context.VersionRollingMask.HasValue ? 6 : 5;
+        if(submitParams.Length < expectedParamCount)
+            throw new StratumException(StratumError.Other, "invalid params");
+
         // extract params
         var workerValue = (submitParams[0] as string)?.Trim();
         var jobId = submitParams[1] as string;

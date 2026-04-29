@@ -1,8 +1,12 @@
 using Autofac;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.IO;
 using Miningcore.Blockchain.Bitcoin;
 using Miningcore.Configuration;
+using Miningcore.Messaging;
 using Miningcore.Stratum;
+using Miningcore.Time;
 using Miningcore.Tests.Util;
 using NBitcoin;
 using Newtonsoft.Json;
@@ -58,6 +62,39 @@ public class BitcoinJobTests : TestBase
     }
 
     [Fact]
+    public void Process_VersionRolled_Submissions_With_Same_Nonce_Are_Not_Duplicates()
+    {
+        var (job, worker) = CreateBitcoinSha256DJob();
+        var context = worker.ContextAs<BitcoinWorkerContext>();
+        context.VersionRollingMask = 0x00006000;
+        context.Difficulty = 0.000000000001;
+
+        var extraNonce2 = "01000000";
+        var nTime = "63445774";
+        var nonce = "51036775";
+
+        job.ProcessShare(worker, extraNonce2, nTime, nonce, "00002000");
+
+        var ex = Record.Exception(() => job.ProcessShare(worker, extraNonce2, nTime, nonce, "00004000"));
+
+        Assert.False(ex is StratumException { Code: StratumError.DuplicateShare });
+    }
+
+    [Fact]
+    public void Process_VersionRolling_Requires_VersionBits()
+    {
+        var (job, worker) = CreateBitcoinSha256DJob();
+        var context = worker.ContextAs<BitcoinWorkerContext>();
+        context.VersionRollingMask = 0x00002000;
+        context.Difficulty = 0.000000000001;
+
+        var ex = Assert.Throws<StratumException>(() =>
+            job.ProcessShare(worker, "01000000", "63445774", "51036775"));
+
+        Assert.Equal(StratumError.Other, ex.Code);
+    }
+
+    [Fact]
     public void Process_Invalid_Nonce()
     {
         var (job, worker) = CreateJob();
@@ -89,6 +126,41 @@ public class BitcoinJobTests : TestBase
         Assert.ThrowsAny<StratumException>(()=> job.ProcessShare(worker, extraNonce2, nTime, nonce));
     }
 
+    [Fact]
+    public void AddressToDestination_Parses_Legacy_P2sh_As_ScriptId()
+    {
+        var destination = BitcoinUtils.AddressToDestination("3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy", Network.Main);
+
+        Assert.IsType<ScriptId>(destination);
+    }
+
+    [Fact]
+    public void AddressToDestination_Keeps_Altcoin_Legacy_P2pkh_Compatibility()
+    {
+        var destination = BitcoinUtils.AddressToDestination("DAFtYMGVdNtqHJoBGg2xqZZwSuYAaEs2Bn", Network.Main);
+
+        Assert.IsType<KeyId>(destination);
+    }
+
+    [Fact]
+    public async Task SubmitShareAsync_Rejects_Short_Submit_Params_As_Stratum_Error()
+    {
+        var manager = new BitcoinJobManager(
+            container.Resolve<IComponentContext>(),
+            container.Resolve<IMasterClock>(),
+            container.Resolve<IMessageBus>(),
+            new BitcoinExtraNonceProvider("test", null));
+
+        var clock = MockMasterClock.FromTicks(638010200200475015);
+        var worker = new StratumConnection(new NullLogger(LogManager.LogFactory), container.Resolve<RecyclableMemoryStreamManager>(), clock, "1", false);
+        worker.SetContext(new BitcoinWorkerContext());
+
+        var ex = await Assert.ThrowsAsync<StratumException>(async () =>
+            await manager.SubmitShareAsync(worker, new object[] { "worker" }, CancellationToken.None));
+
+        Assert.Equal(StratumError.Other, ex.Code);
+    }
+
     private (BitcoinJob, StratumConnection) CreateJob()
     {
         var job = new BitcoinJob();
@@ -106,6 +178,34 @@ public class BitcoinJobTests : TestBase
             ExtraNonce1 = "60000001",
             Difficulty = 0.01,
             UserAgent = "cpuminer-multi/1.3.1"
+        };
+
+        var worker = new StratumConnection(new NullLogger(LogManager.LogFactory), container.Resolve<RecyclableMemoryStreamManager>(), clock, "1", false);
+        worker.SetContext(context);
+
+        job.Init(blockTemplate, "1", pc, null, new ClusterConfig(), clock, poolAddressDestination, network, false,
+            coin.ShareMultiplier, coin.CoinbaseHasherValue, coin.HeaderHasherValue, coin.BlockHasherValue);
+
+        return (job, worker);
+    }
+
+    private (BitcoinJob, StratumConnection) CreateBitcoinSha256DJob()
+    {
+        var job = new BitcoinJob();
+        var coin = (BitcoinTemplate) ModuleInitializer.CoinTemplates["bitcoin"];
+        var pc = new PoolConfig { Template = coin };
+
+        var blockTemplate = JsonConvert.DeserializeObject<Miningcore.Blockchain.Bitcoin.DaemonResponses.BlockTemplate>("{\"version\":536870912,\"previousBlockhash\":\"0000011a86a1ad3609e5359b6b6411a1654108ee7c1afc003dec23b5a0400e4b\",\"coinbaseValue\":1801475949,\"target\":\"000001d771000000000000000000000000000000000000000000000000000000\",\"nonceRange\":\"00000000ffffffff\",\"curTime\":1665423220,\"bits\":\"1e01d771\",\"height\":813750,\"transactions\":[],\"coinbaseAux\":{\"flags\":null},\"default_witness_commitment\":null,\"capabilities\":[\"proposal\"],\"rules\":[\"csv\",\"segwit\"],\"vbavailable\":{},\"vbrequired\":0,\"longpollid\":\"0000011a86a1ad3609e5359b6b6411a1654108ee7c1afc003dec23b5a0400e4b814670\",\"mintime\":1665422408,\"mutable\":[\"time\",\"transactions\",\"prevblock\"],\"sigoplimit\":40000,\"sizelimit\":2000000}", jsonSerializerSettings);
+        var clock = MockMasterClock.FromTicks(638010200200475015);
+        var poolAddressDestination = BitcoinUtils.AddressToDestination("mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn", Network.TestNet);
+        var network = Network.GetNetwork("testnet");
+
+        var context = new BitcoinWorkerContext
+        {
+            Miner = "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn",
+            ExtraNonce1 = "60000001",
+            Difficulty = 0.01,
+            UserAgent = "test"
         };
 
         var worker = new StratumConnection(new NullLogger(LogManager.LogFactory), container.Resolve<RecyclableMemoryStreamManager>(), clock, "1", false);

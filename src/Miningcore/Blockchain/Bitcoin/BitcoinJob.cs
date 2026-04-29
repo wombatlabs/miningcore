@@ -346,13 +346,14 @@ public class BitcoinJob
         return reward;
     }
 
-    protected bool RegisterSubmit(string extraNonce1, string extraNonce2, string nTime, string nonce)
+    protected bool RegisterSubmit(string extraNonce1, string extraNonce2, string nTime, string nonce, string versionBits = null)
     {
         var key = new StringBuilder()
             .Append(extraNonce1)
             .Append(extraNonce2) // lowercase as we don't want to accept case-sensitive values as valid.
             .Append(nTime)
             .Append(nonce) // lowercase as we don't want to accept case-sensitive values as valid.
+            .Append(versionBits)
             .ToString();
 
         return submissions.TryAdd(key, true);
@@ -990,19 +991,27 @@ public class BitcoinJob
         var nonceInt = uint.Parse(nonce, NumberStyles.HexNumber);
 
         // validate version-bits (overt ASIC boost)
-        uint versionBitsInt = 0;
+        uint? versionBitsInt = null;
 
-        if(context.VersionRollingMask.HasValue && versionBits != null)
+        if(context.VersionRollingMask.HasValue)
         {
-            versionBitsInt = uint.Parse(versionBits, NumberStyles.HexNumber);
+            if(string.IsNullOrEmpty(versionBits))
+                throw new StratumException(StratumError.Other, "missing version bits");
+
+            if(versionBits.Length != 8)
+                throw new StratumException(StratumError.Other, "incorrect size of version bits");
+
+            var versionBitsValue = uint.Parse(versionBits, NumberStyles.HexNumber);
 
             // enforce that only bits covered by current mask are changed by miner
-            if((versionBitsInt & ~context.VersionRollingMask.Value) != 0)
+            if((versionBitsValue & ~context.VersionRollingMask.Value) != 0)
                 throw new StratumException(StratumError.Other, "rolling-version mask violation");
+
+            versionBitsInt = versionBitsValue;
         }
 
         // dupe check
-        if(!RegisterSubmit(context.ExtraNonce1, extraNonce2, nTime, nonce))
+        if(!RegisterSubmit(context.ExtraNonce1, extraNonce2, nTime, nonce, versionBitsInt?.ToStringHex8()))
             throw new StratumException(StratumError.DuplicateShare, "duplicate share");
 
         return ProcessShareInternal(worker, extraNonce2, nTimeInt, nonceInt, versionBitsInt);

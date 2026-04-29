@@ -21,11 +21,19 @@ public static class BitcoinUtils
     public static IDestination AddressToDestination(string address, Network expectedNetwork)
     {
         var decoded = Encoders.Base58Check.DecodeData(address);
-        var networkVersionBytes = expectedNetwork.GetVersionBytes(Base58Type.PUBKEY_ADDRESS, true);
-        decoded = decoded.Skip(networkVersionBytes.Length).ToArray();
-        var result = new KeyId(decoded);
+        var pubKeyVersionBytes = expectedNetwork.GetVersionBytes(Base58Type.PUBKEY_ADDRESS, true);
+        var scriptVersionBytes = expectedNetwork.GetVersionBytes(Base58Type.SCRIPT_ADDRESS, true);
 
-        return result;
+        if(decoded.AsSpan().StartsWith(pubKeyVersionBytes))
+            return new KeyId(decoded.Skip(pubKeyVersionBytes.Length).ToArray());
+
+        if(decoded.AsSpan().StartsWith(scriptVersionBytes))
+            return new ScriptId(decoded.Skip(scriptVersionBytes.Length).ToArray());
+
+        if(decoded.Length == 21)
+            return new KeyId(decoded.Skip(1).ToArray());
+
+        throw new FormatException("Invalid address version");
     }
 
     public static IDestination BechSegwitAddressToDestination(string address, Network expectedNetwork, string bechPrefix)
