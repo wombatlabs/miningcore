@@ -962,8 +962,13 @@ public class BitcoinJob
 
     public object GetJobParams(bool isNew)
     {
-        jobParams[^1] = isNew;
-        return jobParams;
+        // Return a per-call copy: jobParams is shared across concurrent broadcasts
+        // (ForEachMinerAsync) and other callers (e.g. subscribe handlers passing
+        // cleanJob=false), so mutating the last slot in-place could ship the wrong
+        // clean_jobs flag to a miner mid-broadcast.
+        var snapshot = (object[]) jobParams.Clone();
+        snapshot[^1] = isNew;
+        return snapshot;
     }
 
     public virtual (Share Share, string BlockHex) ProcessShare(StratumConnection worker,

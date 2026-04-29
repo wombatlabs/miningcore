@@ -43,6 +43,14 @@ public class BitcoinWorkerContext : WorkerContextBase
 
     public BitcoinJob GetJob(string jobId)
     {
-        return validJobs.ToArray().FirstOrDefault(x => x.JobId == jobId);
+        // Caller holds lock(context); iterating the queue directly avoids the
+        // per-share array allocation that ToArray().FirstOrDefault was doing.
+        foreach(var job in validJobs)
+        {
+            if(job.JobId == jobId)
+                return job;
+        }
+
+        return null;
     }
 }
