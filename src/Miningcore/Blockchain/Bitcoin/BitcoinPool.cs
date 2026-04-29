@@ -258,10 +258,13 @@ public class BitcoinPool : PoolBase
             // telemetry
             PublishTelemetry(TelemetryCategory.Share, clock.Now - tsRequest.Timestamp.UtcDateTime, false);
 
-            // update client stats
+            // update client stats — count stales separately so they don't inflate
+            // the invalid-share ratio used by ConsiderBan (stales are usually pool-side
+            // job propagation issues, not miner faults).
             if(ex.Code == StratumError.JobNotFound)
                 context.Stats.StaleShares++;
-            context.Stats.InvalidShares++;
+            else
+                context.Stats.InvalidShares++;
             logger.Info(() => $"[{connection.ConnectionId}] Share rejected: {ex.Message} [{context.UserAgent}]");
 
             // banning
