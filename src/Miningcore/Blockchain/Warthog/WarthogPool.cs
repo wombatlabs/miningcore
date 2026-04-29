@@ -275,7 +275,8 @@ public class WarthogPool : PoolBase
             // update client stats
             if(ex.Code == StratumError.JobNotFound)
                 context.Stats.StaleShares++;
-            context.Stats.InvalidShares++;
+            else
+                context.Stats.InvalidShares++;
             logger.Info(() => $"[{connection.ConnectionId}] Share rejected: {ex.Message} [{context.UserAgent}]");
 
             // banning
