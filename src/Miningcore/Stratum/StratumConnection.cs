@@ -87,6 +87,21 @@ public class StratumConnection
             socket.NoDelay = true;
             socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
 
+            // Tighten keepalive probes. OS default on Linux is ~2h idle / 75s interval / 9 retries,
+            // which means dead rental-service connections (NiceHash, MRR proxies) sit on the server
+            // for hours. With 30s/10s/3 the kernel detects a half-open peer in roughly one minute.
+            try
+            {
+                socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, 30);
+                socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, 10);
+                socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, 3);
+            }
+            catch(SocketException)
+            {
+                // Some platforms (older kernels, BSD variants) don't expose these options;
+                // the basic KeepAlive=true above still applies.
+            }
+
             // create stream
             networkStream = new NetworkStream(socket, true);
 
