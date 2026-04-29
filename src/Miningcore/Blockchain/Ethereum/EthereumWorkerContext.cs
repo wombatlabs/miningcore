@@ -53,6 +53,27 @@ public class EthereumWorkerContext : WorkerContextBase
 
     public EthereumJob GetJob(string jobId)
     {
-        return validJobs.ToArray().FirstOrDefault(x => x.Id == jobId);
+        // Caller holds lock(context); iterating directly avoids the per-share array
+        // allocation that ToArray().FirstOrDefault was doing.
+        foreach(var job in validJobs)
+        {
+            if(job.Id == jobId)
+                return job;
+        }
+
+        return null;
+    }
+
+    public EthereumJob GetJobByHeader(string header)
+    {
+        // Caller holds lock(context). Used by the V1 (ethproxy) submit path which
+        // identifies jobs by header hash rather than job id.
+        foreach(var job in validJobs)
+        {
+            if(job.BlockTemplate.Header.Equals(header))
+                return job;
+        }
+
+        return null;
     }
 }

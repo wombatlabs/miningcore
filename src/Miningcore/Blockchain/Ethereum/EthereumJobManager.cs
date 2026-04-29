@@ -400,10 +400,10 @@ public class EthereumJobManager : JobManagerBase<EthereumJob>
         // stale?
         lock(context)
         {
-            job = context.validJobs.ToArray().FirstOrDefault(x => x.BlockTemplate.Header.Equals(header));
+            job = context.GetJobByHeader(header);
 
             if(job == null)
-                throw new StratumException(StratumError.MinusOne, "stale share");
+                throw new StratumException(StratumError.JobNotFound, "stale share");
         }
 
         return await SubmitShareAsync(worker, context, workerName, job, nonce.StripHexPrefix(), solution, ct);
@@ -426,7 +426,7 @@ public class EthereumJobManager : JobManagerBase<EthereumJob>
         {
             // look up job by id
             if((job = context.GetJob(jobId)) == null)
-                throw new StratumException(StratumError.MinusOne, "stale share");
+                throw new StratumException(StratumError.JobNotFound, "stale share");
         }
 
         // assemble full-nonce

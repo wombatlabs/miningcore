@@ -60,6 +60,12 @@ public class EthereumPool : PoolBase
 
         context.UserAgent = requestParams.FirstOrDefault()?.Trim();
 
+        // ethashStratumV2Mode = "standard" in pool config switches subscribe responses to the
+        // MRR-compatible format (no EthereumStratum/1.0.0 marker, separate set_difficulty entry,
+        // explicit extranonce2 size). Default stays "nicehash" to preserve current behavior.
+        if(!useNicehashStratumV2)
+            context.UseMrrV2Compat = true;
+
         manager.PrepareWorker(connection);
 
         object[] data;
