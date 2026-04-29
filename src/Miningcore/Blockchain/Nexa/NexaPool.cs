@@ -293,10 +293,22 @@ public class NexaPool : PoolBase
         {
             var requestedDiff = (double) Convert.ChangeType(request.Params, TypeCode.Double)!;
 
-            // client may suggest higher-than-base difficulty, but not a lower one
-            var poolEndpoint = poolConfig.Ports[connection.LocalEndpoint.Port];
+            // Accept suggestion if it falls within vardiff's configured range, otherwise
+            // (no vardiff configured) require the suggestion to exceed the port's base diff.
+            // Disable vardiff on the connection so the suggestion isn't immediately overridden.
+            if(context.VarDiff != null && requestedDiff >= context.VarDiff.Config.MinDiff)
+            {
+                if(context.VarDiff.Config.MaxDiff.HasValue && requestedDiff > context.VarDiff.Config.MaxDiff.Value)
+                    requestedDiff = context.VarDiff.Config.MaxDiff.Value;
 
-            if(requestedDiff > poolEndpoint.Difficulty)
+                context.VarDiff = null; // honor the miner's static request
+                context.SetDifficulty(requestedDiff);
+                await connection.NotifyAsync(BitcoinStratumMethods.SetDifficulty, new object[] { context.Difficulty });
+
+                logger.Info(() => $"[{connection.ConnectionId}] Difficulty set to {requestedDiff} as requested by miner");
+            }
+
+            else if(context.VarDiff == null && requestedDiff > context.Difficulty)
             {
                 context.SetDifficulty(requestedDiff);
                 await connection.NotifyAsync(BitcoinStratumMethods.SetDifficulty, new object[] { context.Difficulty });
