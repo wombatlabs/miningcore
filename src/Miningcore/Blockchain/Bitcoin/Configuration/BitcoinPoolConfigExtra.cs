@@ -1,10 +1,13 @@
 using Miningcore.Configuration;
+using Miningcore.Mining;
 using Newtonsoft.Json.Linq;
 
 namespace Miningcore.Blockchain.Bitcoin.Configuration;
 
 public class BitcoinPoolConfigExtra
 {
+    public const int MaxExtraNonce2Size = 32;
+
     public BitcoinAddressType AddressType { get; set; } = BitcoinAddressType.Legacy;
 
     public string BechPrefix { get; set; } = "bc";
@@ -13,6 +16,12 @@ public class BitcoinPoolConfigExtra
     /// CashAddr prefix (e.g. bitcoincash, bchtest, bitcoincashii)
     /// </summary>
     public string CashAddrPrefix { get; set; } = "bitcoincash";
+
+    /// <summary>
+    /// Size of extraNonce2 advertised via mining.subscribe, in bytes.
+    /// Default: 4. Braiins Hashpower requires at least 7.
+    /// </summary>
+    public int? ExtraNonce2Size { get; set; }
 
     /// <summary>
     /// Maximum number of tracked jobs.
@@ -45,4 +54,14 @@ public class BitcoinPoolConfigExtra
     /// Custom Arguments for getblocktemplate RPC
     /// </summary>
     public JToken GBTArgs { get; set; }
+
+    public static int GetExtraNonce2Size(BitcoinPoolConfigExtra extraPoolConfig, string poolId = null)
+    {
+        var result = extraPoolConfig?.ExtraNonce2Size ?? BitcoinConstants.Extranonce2Length;
+
+        if(result <= 0 || result > MaxExtraNonce2Size)
+            throw new PoolStartupException($"extraNonce2Size must be between 1 and {MaxExtraNonce2Size} bytes", poolId);
+
+        return result;
+    }
 }

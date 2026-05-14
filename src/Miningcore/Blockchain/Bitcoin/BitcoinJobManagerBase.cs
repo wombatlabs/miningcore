@@ -40,7 +40,7 @@ public abstract class BitcoinJobManagerBase<TJob> : JobManagerBase<TJob>
     protected readonly IMasterClock clock;
     protected RpcClient rpc;
     protected readonly IExtraNonceProvider extraNonceProvider;
-    protected const int ExtranonceBytes = 4;
+    protected const int ExtranonceBytes = BitcoinConstants.Extranonce1Length;
     public int maxActiveJobs { get; protected set; } = 4;
     protected bool hasLegacyDaemon;
     protected BitcoinPoolConfigExtra extraPoolConfig;

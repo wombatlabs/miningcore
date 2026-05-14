@@ -241,7 +241,7 @@ public class BitcoinJobManager : BitcoinJobManagerBase<BitcoinJob>
         var responseData = new object[]
         {
             context.ExtraNonce1,
-            BitcoinConstants.ExtranoncePlaceHolderLength - ExtranonceBytes,
+            BitcoinPoolConfigExtra.GetExtraNonce2Size(extraPoolConfig, poolConfig?.Id),
         };
 
         return responseData;

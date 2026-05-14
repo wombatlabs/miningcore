@@ -872,7 +872,8 @@ public class BitcoinJob
 
         Difficulty = new Target(System.Numerics.BigInteger.Parse(BlockTemplate.Target, NumberStyles.HexNumber)).Difficulty;
 
-        extraNoncePlaceHolderLength = BitcoinConstants.ExtranoncePlaceHolderLength;
+        extraNoncePlaceHolderLength = BitcoinConstants.Extranonce1Length +
+            BitcoinPoolConfigExtra.GetExtraNonce2Size(extraPoolConfig, pc.Id);
         this.isPoS = isPoS;
         this.shareMultiplier = shareMultiplier;
 
@@ -994,6 +995,11 @@ public class BitcoinJob
             throw new StratumException(StratumError.Other, "incorrect size of nonce");
 
         var nonceInt = uint.Parse(nonce, NumberStyles.HexNumber);
+
+        // validate extraNonce2
+        var expectedExtraNonce2Length = (extraNoncePlaceHolderLength - BitcoinConstants.Extranonce1Length) * 2;
+        if(extraNonce2.Length != expectedExtraNonce2Length)
+            throw new StratumException(StratumError.Other, "incorrect size of extraNonce2");
 
         // validate version-bits (overt ASIC boost)
         uint? versionBitsInt = null;

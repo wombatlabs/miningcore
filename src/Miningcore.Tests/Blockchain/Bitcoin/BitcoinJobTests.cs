@@ -2,7 +2,9 @@ using Autofac;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.IO;
+using Miningcore.Blockchain;
 using Miningcore.Blockchain.Bitcoin;
+using Miningcore.Blockchain.Bitcoin.Configuration;
 using Miningcore.Configuration;
 using Miningcore.Messaging;
 using Miningcore.Stratum;
@@ -161,6 +163,39 @@ public class BitcoinJobTests : TestBase
         Assert.Equal(StratumError.Other, ex.Code);
     }
 
+    [Fact]
+    public void GetSubscriberData_Defaults_To_Four_Byte_ExtraNonce2()
+    {
+        var manager = CreateTestJobManager();
+        var worker = CreateWorker();
+
+        var data = manager.GetSubscriberData(worker);
+
+        Assert.Equal(4, data[1]);
+    }
+
+    [Fact]
+    public void GetSubscriberData_Uses_Configured_ExtraNonce2_Size()
+    {
+        var manager = CreateTestJobManager(new BitcoinPoolConfigExtra { ExtraNonce2Size = 8 });
+        var worker = CreateWorker();
+
+        var data = manager.GetSubscriberData(worker);
+
+        Assert.Equal(8, data[1]);
+    }
+
+    [Fact]
+    public void ProcessShare_Rejects_ExtraNonce2_With_Wrong_Configured_Size()
+    {
+        var (job, worker) = CreateBitcoinSha256DJob(new BitcoinPoolConfigExtra { ExtraNonce2Size = 8 });
+
+        var ex = Assert.Throws<StratumException>(() =>
+            job.ProcessShare(worker, "01000000", "63445774", "51036775"));
+
+        Assert.Equal(StratumError.Other, ex.Code);
+    }
+
     private (BitcoinJob, StratumConnection) CreateJob()
     {
         var job = new BitcoinJob();
@@ -189,7 +224,7 @@ public class BitcoinJobTests : TestBase
         return (job, worker);
     }
 
-    private (BitcoinJob, StratumConnection) CreateBitcoinSha256DJob()
+    private (BitcoinJob, StratumConnection) CreateBitcoinSha256DJob(BitcoinPoolConfigExtra extraPoolConfig = null)
     {
         var job = new BitcoinJob();
         var coin = (BitcoinTemplate) ModuleInitializer.CoinTemplates["bitcoin"];
@@ -211,9 +246,37 @@ public class BitcoinJobTests : TestBase
         var worker = new StratumConnection(new NullLogger(LogManager.LogFactory), container.Resolve<RecyclableMemoryStreamManager>(), clock, "1", false);
         worker.SetContext(context);
 
-        job.Init(blockTemplate, "1", pc, null, new ClusterConfig(), clock, poolAddressDestination, network, false,
+        job.Init(blockTemplate, "1", pc, extraPoolConfig, new ClusterConfig(), clock, poolAddressDestination, network, false,
             coin.ShareMultiplier, coin.CoinbaseHasherValue, coin.HeaderHasherValue, coin.BlockHasherValue);
 
         return (job, worker);
+    }
+
+    private TestBitcoinJobManager CreateTestJobManager(BitcoinPoolConfigExtra extraPoolConfig = null)
+    {
+        return new TestBitcoinJobManager(
+            container.Resolve<IComponentContext>(),
+            container.Resolve<IMasterClock>(),
+            container.Resolve<IMessageBus>(),
+            new BitcoinExtraNonceProvider("test", null),
+            extraPoolConfig);
+    }
+
+    private StratumConnection CreateWorker()
+    {
+        var clock = MockMasterClock.FromTicks(638010200200475015);
+        var worker = new StratumConnection(new NullLogger(LogManager.LogFactory), container.Resolve<RecyclableMemoryStreamManager>(), clock, "1", false);
+        worker.SetContext(new BitcoinWorkerContext());
+        return worker;
+    }
+
+    private class TestBitcoinJobManager : BitcoinJobManager
+    {
+        public TestBitcoinJobManager(IComponentContext ctx, IMasterClock clock, IMessageBus messageBus,
+            IExtraNonceProvider extraNonceProvider, BitcoinPoolConfigExtra extraPoolConfig) :
+            base(ctx, clock, messageBus, extraNonceProvider)
+        {
+            this.extraPoolConfig = extraPoolConfig;
+        }
     }
 }
