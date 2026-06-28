@@ -133,13 +133,22 @@ public class StatsRepository : IStatsRepository
                         }
                     }
 
+                    // count blocks found per worker (all statuses)
+                    query = @"SELECT COALESCE(worker, '') AS worker, COUNT(*) AS count FROM blocks
+                        WHERE poolid = @poolId AND miner = @miner GROUP BY worker";
+
+                    var blocksFoundByWorker = (await con.QueryAsync(new CommandDefinition(query,
+                            new { poolId, miner }, tx, cancellationToken: ct)))
+                        .ToDictionary(row => (string) row.worker, row => (long) row.count);
+
                     // transform to dictionary
                     result.Performance = new WorkerPerformanceStatsContainer
                     {
                         Workers = stats.ToDictionary(x => x.Worker ?? string.Empty, x => new WorkerPerformanceStats
                         {
                             Hashrate = x.Hashrate,
-                            SharesPerSecond = x.SharesPerSecond
+                            SharesPerSecond = x.SharesPerSecond,
+                            BlocksFound = blocksFoundByWorker.GetValueOrDefault(x.Worker ?? string.Empty, 0)
                         }),
 
                         Created = stats.First().Created

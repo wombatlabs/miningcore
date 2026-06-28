@@ -31,6 +31,7 @@ CREATE TABLE blocks
         minereffort FLOAT NULL,
 	transactionconfirmationdata TEXT NOT NULL,
 	miner TEXT NULL,
+	worker TEXT NULL,
 	reward decimal(28,12) NULL,
     source TEXT NULL,
     hash TEXT NULL,
@@ -39,6 +40,7 @@ CREATE TABLE blocks
 
 CREATE INDEX IDX_BLOCKS_POOL_BLOCK_STATUS on blocks(poolid, blockheight, status);
 CREATE INDEX IDX_BLOCKS_POOL_BLOCK_TYPE on blocks(poolid, blockheight, type);
+CREATE INDEX IDX_BLOCKS_POOL_MINER_WORKER on blocks(poolid, miner, worker);
 
 CREATE TABLE balances
 (

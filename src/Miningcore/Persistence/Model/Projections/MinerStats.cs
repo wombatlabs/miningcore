@@ -4,6 +4,7 @@ public record WorkerPerformanceStats
 {
     public double Hashrate { get; init; }
     public double SharesPerSecond { get; init; }
+    public long BlocksFound { get; init; }
 }
 
 public record WorkerPerformanceStatsContainer

@@ -11,6 +11,7 @@ public class WorkerPerformanceStats
 {
     public double Hashrate { get; set; }
     public double SharesPerSecond { get; set; }
+    public long BlocksFound { get; set; }
 }
 
 public class WorkerPerformanceStatsContainer
