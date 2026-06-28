@@ -47,6 +47,7 @@ public static class KaspaConstants
     public const int PublicKeySize = 32;
     public const int PublicKeySizeECDSA = 33;
     public const int Blake2bSize256 = 32;
+    public const ulong ToccataActivationDaaScoreMainnet = 474165565;
 }
 
 public static class KarlsencoinConstants

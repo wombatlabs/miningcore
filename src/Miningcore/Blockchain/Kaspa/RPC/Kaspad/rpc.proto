@@ -8,6 +8,11 @@
 //
 // **IMPORTANT:** This API is a work in progress and is subject to break between versions.
 //
+// Toccata hard fork (rusty-kaspa v2.0.1, mainnet activation DAA score 474165565 ~2026-06-30 16:15 UTC):
+// the transaction/UTXO/covenant fields below were added to stay aligned with the post-Toccata
+// node RPC. All additions are backward-compatible (new field numbers + a same-field-number rename),
+// so pre-Toccata Kaspa-family coins are unaffected.
+//
 syntax = "proto3";
 
 option csharp_namespace = "Miningcore.Blockchain.Kaspa.Kaspad";
@@ -39,6 +44,7 @@ message RpcBlockHeader {
   string blueWork = 10;
   string pruningPoint = 14;
   uint64 blueScore = 13;
+  string hash = 15; // Toccata: node-computed block hash carried in the RPC header
 }
 
 message RpcBlockLevelParents {
@@ -67,7 +73,7 @@ message RpcTransaction {
   uint64 gas = 6;
   string payload = 8;
   RpcTransactionVerboseData verboseData = 9;
-  uint64 mass = 10;
+  uint64 storageMass = 10; // Toccata: renamed from `mass` (wire field number 10 unchanged)
 }
 
 message RpcTransactionInput {
@@ -76,6 +82,7 @@ message RpcTransactionInput {
   uint64 sequence = 3;
   uint32 sigOpCount = 5;
   RpcTransactionInputVerboseData verboseData = 4;
+  uint32 computeBudget = 6; // Toccata
 }
 
 message RpcScriptPublicKey {
@@ -87,6 +94,13 @@ message RpcTransactionOutput {
   uint64 amount = 1;
   RpcScriptPublicKey scriptPublicKey = 2;
   RpcTransactionOutputVerboseData verboseData = 3;
+  RpcCovenantBinding covenant = 4; // Toccata: covenant binding (null/absent for non-covenant outputs)
+}
+
+// Toccata: covenant lineage binding attached to a transaction output
+message RpcCovenantBinding {
+  uint32 authorizingInput = 1;
+  string covenantId = 2;
 }
 
 message RpcOutpoint {
@@ -99,6 +113,14 @@ message RpcUtxoEntry {
   RpcScriptPublicKey scriptPublicKey = 2;
   uint64 blockDaaScore = 3;
   bool isCoinbase = 4;
+  RpcUtxoEntryVerboseData verboseData = 5; // Toccata
+  string covenantId = 6; // Toccata
+}
+
+// Toccata
+message RpcUtxoEntryVerboseData {
+  string scriptPublicKeyType = 5;
+  string scriptPublicKeyAddress = 6;
 }
 
 message RpcTransactionVerboseData{
