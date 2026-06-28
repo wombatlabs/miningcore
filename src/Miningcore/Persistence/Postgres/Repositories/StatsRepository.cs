@@ -133,9 +133,8 @@ public class StatsRepository : IStatsRepository
                         }
                     }
 
-                    // count blocks found per worker (all statuses)
-                    query = @"SELECT COALESCE(worker, '') AS worker, COUNT(*) AS count FROM blocks
-                        WHERE poolid = @poolId AND miner = @miner GROUP BY worker";
+                    query = @"SELECT worker, COUNT(*) AS count FROM blocks
+                        WHERE poolid = @poolId AND miner = @miner AND worker IS NOT NULL GROUP BY worker";
 
                     var blocksFoundByWorker = (await con.QueryAsync(new CommandDefinition(query,
                             new { poolId, miner }, tx, cancellationToken: ct)))
