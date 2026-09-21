@@ -319,31 +319,11 @@ public class EquihashJob
             bs.ReadWrite(header);
             bs.ReadWrite(solution);
 
-            var txCount = transactionCount.ToString();
-            if (Math.Abs(txCount.Length % 2) == 1)
-                txCount = "0" + txCount;
-
-            if (transactionCount <= 0xfc)
-            {
-                var simpleVarIntBytes = (Span<byte>) txCount.HexToByteArray();
-
-                bs.ReadWrite(simpleVarIntBytes);
-            }
-            else if (transactionCount <= 0x7fff)
-            {
-                if (txCount.Length == 2)
-                    txCount = "00" + txCount;
-
-                var complexHeader = (Span<byte>) new byte[] { 0xFD };
-                var complexVarIntBytes = (Span<byte>) txCount.HexToReverseByteArray();
-
-                // concat header and varInt
-                Span<byte> complexHeaderVarIntBytes = stackalloc byte[complexHeader.Length + complexVarIntBytes.Length];
-                complexHeader.CopyTo(complexHeaderVarIntBytes);
-                complexVarIntBytes.CopyTo(complexHeaderVarIntBytes[complexHeader.Length..]);
-
-                bs.ReadWrite(complexHeaderVarIntBytes);
-            }
+            // transaction count as Bitcoin CompactSize (VarInt).
+            // Note: the previous hex-string encoding here corrupted the count for blocks with 10 or
+            // more transactions (e.g. 10 -> 0x10), producing invalid blocks. VeruscoinJob already
+            // uses ReadWriteAsVarInt for this reason.
+            bs.ReadWriteAsVarInt(ref transactionCount);
 
             bs.ReadWrite(coinbase);
             bs.ReadWrite(rawTransactionBuffer);
