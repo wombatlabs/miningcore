@@ -46,6 +46,9 @@ public class EquihashJob
     protected bool isOverwinterActive;
     protected bool isSaplingActive;
 
+    // Use the coinbase transaction supplied by the node (coinbasetxn) verbatim - Zcash NU5+ on Zebra
+    protected bool useNodeCoinbaseTx;
+
     // serialization constants
     protected byte[] sha256Empty = new byte[32];
     protected uint txVersion = 1u; // transaction version (currently 1) - see https://en.bitcoin.it/wiki/Transaction
@@ -154,6 +157,40 @@ public class EquihashJob
 
         var address = networkParams.TreasuryRewardAddresses[index];
         return address;
+    }
+
+    protected virtual string GetBlockCommitmentsHashHex()
+    {
+        // NU5+ commits to hashBlockCommitments (ZIP-244); Zebra returns it as
+        // defaultroots.blockcommitmentshash (and, for compatibility, as finalsaplingroothash).
+        // Pre-NU5 chains only set the final sapling root.
+        return BlockTemplate.DefaultRoots?.BlockCommitmentsHash ??
+            BlockTemplate.BlockCommitmentsHash ??
+            BlockTemplate.FinalSaplingRootHash;
+    }
+
+    protected virtual void SetupCoinbaseFromTemplate()
+    {
+        var coinbaseTx = BlockTemplate.CoinbaseTx;
+
+        if(coinbaseTx == null || string.IsNullOrEmpty(coinbaseTx.Data) || string.IsNullOrEmpty(coinbaseTx.Hash))
+            throw new Exception("useNodeCoinbaseTx is set but the block template does not contain a coinbasetxn");
+
+        // use the node's coinbase bytes verbatim; coinbasetxn.hash is the txid in display (big-endian)
+        // order, exactly like BlockTemplate.Transactions[].Hash, so reverse it to internal order for the
+        // merkle tree
+        coinbaseInitial = coinbaseTx.Data.HexToByteArray();
+        coinbaseInitialHash = coinbaseTx.Hash.HexToReverseByteArray();
+
+        // the node coinbase must pay the configured pool address (the node's mining address); otherwise
+        // the pool would credit itself for a block whose reward went elsewhere
+        var expectedScript = poolAddressDestination.ScriptPubKey.ToBytes().ToHexString();
+
+        if(coinbaseTx.Data.IndexOf(expectedScript, StringComparison.OrdinalIgnoreCase) < 0)
+            throw new Exception("node coinbase does not pay the configured pool address - ensure the node mining address matches the pool address");
+
+        // reward credited to the pool = miner subsidy + transaction fees (what the node's coinbase pays)
+        rewardToPool = new Money(Math.Round(blockReward) + rewardFees, MoneyUnit.Satoshi);
     }
 
     protected virtual void BuildCoinbase()
@@ -287,8 +324,10 @@ public class EquihashJob
             Nonce = nonce
         };
 
-        if(isSaplingActive && !string.IsNullOrEmpty(BlockTemplate.FinalSaplingRootHash))
-            blockHeader.HashReserved = BlockTemplate.FinalSaplingRootHash.HexToReverseByteArray();
+        var commitmentsHash = GetBlockCommitmentsHashHex();
+
+        if((isSaplingActive || useNodeCoinbaseTx) && !string.IsNullOrEmpty(commitmentsHash))
+            blockHeader.HashReserved = commitmentsHash.HexToReverseByteArray();
 
         return blockHeader.ToBytes();
     }
@@ -480,34 +519,48 @@ public class EquihashJob
             .ReverseInPlace()
             .ToHexString();
 
-        if(blockTemplate.Subsidy != null)
-            blockReward = blockTemplate.Subsidy.Miner * BitcoinConstants.SatoshisPerBitcoin;
-        else
-            blockReward = BlockTemplate.CoinbaseValue;
-
-        if(networkParams?.PayFundingStream == true)
-        {
-            decimal fundingstreamTotal = 0;
-            fundingstreamTotal = blockTemplate.Subsidy.FundingStreams.Sum(x => x.Value);
-            blockReward = (blockTemplate.Subsidy.Miner + fundingstreamTotal) * BitcoinConstants.SatoshisPerBitcoin;
-        }
-        else if(networkParams?.vOuts == true)
-        {
-            blockReward = (decimal) ((blockTemplate.Subsidy.Miner + blockTemplate.Subsidy.Community + blockTemplate.Subsidy.Securenodes + blockTemplate.Subsidy.Supernodes) * BitcoinConstants.SatoshisPerBitcoin);
-        }
-        else if(networkParams?.PayFoundersReward == true)
-        {
-            var founders = blockTemplate.Subsidy.Founders ?? blockTemplate.Subsidy.Community;
-
-            if(!founders.HasValue)
-                throw new Exception("Error, founders reward missing for block template");
-
-            blockReward = (blockTemplate.Subsidy.Miner + founders.Value) * BitcoinConstants.SatoshisPerBitcoin;
-        }
-
         rewardFees = blockTemplate.Transactions.Sum(x => x.Fee);
 
-        BuildCoinbase();
+        useNodeCoinbaseTx = networkParams?.UseNodeCoinbaseTx == true;
+
+        if(useNodeCoinbaseTx)
+        {
+            // Zcash NU5+ mined against a node (Zebra): use the coinbase the node already built.
+            // The node's coinbase pays the miner subsidy plus transaction fees to its configured
+            // address and encodes any funding streams / lockbox and the correct transaction version.
+            // Rebuilding it here would invalidate the block-commitments hash the node precomputed.
+            blockReward = (blockTemplate.Subsidy?.Miner ?? 0m) * BitcoinConstants.SatoshisPerBitcoin;
+            SetupCoinbaseFromTemplate();
+        }
+        else
+        {
+            if(blockTemplate.Subsidy != null)
+                blockReward = blockTemplate.Subsidy.Miner * BitcoinConstants.SatoshisPerBitcoin;
+            else
+                blockReward = BlockTemplate.CoinbaseValue;
+
+            if(networkParams?.PayFundingStream == true)
+            {
+                decimal fundingstreamTotal = 0;
+                fundingstreamTotal = blockTemplate.Subsidy.FundingStreams.Sum(x => x.Value);
+                blockReward = (blockTemplate.Subsidy.Miner + fundingstreamTotal) * BitcoinConstants.SatoshisPerBitcoin;
+            }
+            else if(networkParams?.vOuts == true)
+            {
+                blockReward = (decimal) ((blockTemplate.Subsidy.Miner + blockTemplate.Subsidy.Community + blockTemplate.Subsidy.Securenodes + blockTemplate.Subsidy.Supernodes) * BitcoinConstants.SatoshisPerBitcoin);
+            }
+            else if(networkParams?.PayFoundersReward == true)
+            {
+                var founders = blockTemplate.Subsidy.Founders ?? blockTemplate.Subsidy.Community;
+
+                if(!founders.HasValue)
+                    throw new Exception("Error, founders reward missing for block template");
+
+                blockReward = (blockTemplate.Subsidy.Miner + founders.Value) * BitcoinConstants.SatoshisPerBitcoin;
+            }
+
+            BuildCoinbase();
+        }
 
         // build tx hashes
         var txHashes = new List<uint256> { new(coinbaseInitialHash) };
@@ -518,9 +571,20 @@ public class EquihashJob
         merkleRootReversed = merkleRoot.ReverseInPlace();
         merkleRootReversedHex = merkleRootReversed.ToHexString();
 
-        // misc
-        var hashReserved = isSaplingActive && !string.IsNullOrEmpty(blockTemplate.FinalSaplingRootHash) ?
-            blockTemplate.FinalSaplingRootHash.HexToReverseByteArray().ToHexString() :
+        // when using the node coinbase verbatim, our merkle root must match the template's;
+        // a mismatch means the coinbasetxn handling (bytes or txid byte-order) is wrong
+        if(useNodeCoinbaseTx && !string.IsNullOrEmpty(blockTemplate.DefaultRoots?.MerkleRoot))
+        {
+            var computedMerkleRoot = merkleRoot.ToNewReverseArray().ToHexString();
+
+            if(!string.Equals(computedMerkleRoot, blockTemplate.DefaultRoots.MerkleRoot, StringComparison.OrdinalIgnoreCase))
+                throw new Exception($"merkle root mismatch (computed {computedMerkleRoot} vs template {blockTemplate.DefaultRoots.MerkleRoot})");
+        }
+
+        // misc: block-commitments hash (NU5+) or final sapling root (pre-NU5) for the 32-byte reserved field
+        var commitmentsHash = GetBlockCommitmentsHashHex();
+        var hashReserved = (isSaplingActive || useNodeCoinbaseTx) && !string.IsNullOrEmpty(commitmentsHash) ?
+            commitmentsHash.HexToReverseByteArray().ToHexString() :
             sha256Empty.ToHexString();
 
         jobParams = new object[]

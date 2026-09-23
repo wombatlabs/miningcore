@@ -49,16 +49,22 @@ public class EquihashJobManager : BitcoinJobManagerBase<EquihashJob>
 
     private async Task<RpcResponse<EquihashBlockTemplate>> GetBlockTemplateAsync(CancellationToken ct)
     {
-        var subsidyResponse = await rpc.ExecuteAsync<ZCashBlockSubsidy>(logger, BitcoinCommands.GetBlockSubsidy, ct);
-        
         var result = await rpc.ExecuteAsync<EquihashBlockTemplate>(logger,
             BitcoinCommands.GetBlockTemplate, ct, extraPoolConfig?.GBTArgs ?? (object) GetBlockTemplateParams());
 
-        if(subsidyResponse.Error == null && result.Error == null && result.Response != null)
+        if(result.Error != null || result.Response == null)
+            return result;
+
+        // fetch the subsidy for the height being mined (the template height), not the current tip;
+        // otherwise the reward is wrong across halving / funding-stream boundaries
+        var subsidyResponse = await rpc.ExecuteAsync<ZCashBlockSubsidy>(logger,
+            BitcoinCommands.GetBlockSubsidy, ct, new object[] { result.Response.Height });
+
+        if(subsidyResponse.Error == null)
             result.Response.Subsidy = subsidyResponse.Response;
         else if(subsidyResponse.Error?.Code != (int) BitcoinRPCErrorCode.RPC_METHOD_NOT_FOUND)
             result = new RpcResponse<EquihashBlockTemplate>(null, new JsonRpcError(-1, $"{BitcoinCommands.GetBlockSubsidy} failed", null));
-        
+
         return result;
     }
 

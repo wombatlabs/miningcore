@@ -4884,6 +4884,7 @@
                     ]
                 },
                 "coinbaseTxNetwork": "zcash-main",
+                "useNodeCoinbaseTx": true,
                 "payFoundersReward": true,
                 "payFundingStream": true,
                 "percentFoundersReward": 20,
@@ -4959,6 +4960,7 @@
                     ]
                 },
                 "coinbaseTxNetwork": "zcash-test",
+                "useNodeCoinbaseTx": true,
                 "payFoundersReward": true,
                 "payFundingStream": true,
                 "percentFoundersReward": 20,
@@ -5034,6 +5036,7 @@
                     ]
                 },
                 "coinbaseTxNetwork": "zcash-reg",
+                "useNodeCoinbaseTx": true,
                 "payFoundersReward": true,
                 "percentFoundersReward": 20,
                 "foundersRewardAddresses": [

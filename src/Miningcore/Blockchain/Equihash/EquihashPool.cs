@@ -55,7 +55,11 @@ public class EquihashPool : PoolBase
 
         extraConfig = pc.Extra.SafeExtensionDataAs<EquihashPoolConfigExtra>();
 
-        if(pc.Template.As<EquihashCoinTemplate>().UsesZCashAddressFormat &&
+        // a z-address is only needed for wallet-based (shielded) payouts; when the coin mines against a
+        // node that builds the coinbase (e.g. Zebra, which has no wallet) it is not required
+        var usesNodeCoinbaseTx = coin.Networks?.Values.Any(n => n.UseNodeCoinbaseTx) == true;
+
+        if(coin.UsesZCashAddressFormat && !usesNodeCoinbaseTx &&
            string.IsNullOrEmpty(extraConfig?.ZAddress))
             throw new PoolStartupException("Pool z-address is not configured", pc.Id);
     }

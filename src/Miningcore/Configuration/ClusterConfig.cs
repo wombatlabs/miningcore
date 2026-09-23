@@ -671,6 +671,16 @@ public partial class EquihashCoinTemplate : CoinTemplate
 
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
         public uint? SaplingTxVersionGroupId { get; set; }
+
+        /// <summary>
+        /// Use the coinbase transaction supplied by the node (coinbasetxn) verbatim instead of
+        /// constructing it. Required for Zcash NU5 and later mined against a node such as Zebra:
+        /// rebuilding the coinbase would invalidate the block-commitments hash the node precomputed.
+        /// The coinbase pays whatever address the node is configured to mine to
+        /// (for Zebra, mining.miner_address in zebrad.toml), which must equal the pool address.
+        /// </summary>
+        [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
+        public bool UseNodeCoinbaseTx { get; set; }
     }
 
     [JsonProperty(Order = -7, DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate)]
