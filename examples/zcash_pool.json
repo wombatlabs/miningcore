@@ -107,6 +107,13 @@
                 "port": 8232,
                 "user": "user",
                 "password": "pass"
+            },
+            {
+                "host": "127.0.0.1",
+                "port": 8233,
+                "user": "user",
+                "password": "pass",
+                "category": "wallet"
             }
         ],
         "paymentProcessing": {
@@ -115,7 +122,8 @@
             "payoutScheme": "PPLNS",
             "payoutSchemeConfig": {
                 "factor": 2.0
-            }
+            },
+            "walletPassword": ""
         }
     }]
 }

@@ -15,6 +15,7 @@ using Miningcore.Persistence.Repositories;
 using Miningcore.Rpc;
 using Miningcore.Time;
 using NBitcoin;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Block = Miningcore.Persistence.Model.Block;
 using Contract = Miningcore.Contracts.Contract;
@@ -45,6 +46,7 @@ public class EquihashPayoutHandler : BitcoinPayoutHandler
     protected bool supportsZSendManyPrivacyPolicy;
     protected Network network;
     protected EquihashCoinTemplate.EquihashNetworkParams chainConfig;
+    protected RpcClient walletRpcClient;
     protected override string LogCategory => "Equihash Payout Handler";
     protected const decimal TransferFee = 0.0001m;
     protected const int ZMinConfirmations = 8;
@@ -65,14 +67,28 @@ public class EquihashPayoutHandler : BitcoinPayoutHandler
 
         chainConfig = pc.Template.As<EquihashCoinTemplate>().GetNetwork(network.ChainName);
 
+        // when mining against a wallet-less node (Zebra), payouts go through a separate transparent
+        // wallet daemon; the shielded (z_*) payout path and its capability probes do not apply
+        if(chainConfig?.UseNodeCoinbaseTx == true)
+        {
+            var walletDaemon = pc.Daemons.FirstOrDefault(x => x.Category?.ToLower() == EquihashConstants.WalletDaemonCategory);
+
+            if(walletDaemon != null)
+                walletRpcClient = new RpcClient(walletDaemon, ctx.Resolve<JsonSerializerSettings>(), messageBus, pc.Id);
+            else
+                logger.Warn(() => $"[{LogCategory}] No wallet daemon (category '{EquihashConstants.WalletDaemonCategory}') configured; transparent payouts will not run until one is added");
+
+            return;
+        }
+
         // detect z_shieldcoinbase support
         var response = await rpcClient.ExecuteAsync<JObject>(logger, EquihashCommands.ZShieldCoinbase, ct);
         supportsNativeShielding = response.Error.Code != (int) BitcoinRPCErrorCode.RPC_METHOD_NOT_FOUND;
-        
+
         // detect sendcurrency support
         var responseSendCurrency = await rpcClient.ExecuteAsync<JObject>(logger, EquihashCommands.SendCurrency, ct);
         supportsSendCurrency = responseSendCurrency.Error.Code != (int) BitcoinRPCErrorCode.RPC_METHOD_NOT_FOUND;
-        
+
         // detect z_sendmany PrivacyPolicy support
         var responseZSendMany = await rpcClient.ExecuteAsync<string>(logger, EquihashCommands.ZSendMany, ct, new object[] { poolExtraConfig.ZAddress, new [] { new ZSendManyRecipient { Address = poolExtraConfig.ZAddress, Amount = 0.0m } }, ZMinConfirmations, TransferFee, "WrongPrivacyPolicy" }); // we willingly provide the wrong parameter for "PrivacyPolicy" in order to detect its support and more importantly not accidently altering the pool wallet
         supportsZSendManyPrivacyPolicy = responseZSendMany.Error?.Code == (int) BitcoinRPCErrorCode.RPC_INVALID_PARAMETER;
@@ -178,6 +194,13 @@ public class EquihashPayoutHandler : BitcoinPayoutHandler
     {
         Contract.RequiresNonNull(balances);
 
+        // wallet-less node (Zebra): pay transparently (t-addr -> t-addr) through the external wallet daemon
+        if(chainConfig?.UseNodeCoinbaseTx == true)
+        {
+            await PayoutTransparentAsync(pool, balances, ct);
+            return;
+        }
+
         // Some projects like Veruscoin does not require shielding before being able to spend coins.
         // They can also sends coins from a t-address to t-addresses and z-addresses
         if(supportsSendCurrency)
@@ -190,7 +213,122 @@ public class EquihashPayoutHandler : BitcoinPayoutHandler
 
         await rpcClient.ExecuteAsync<JToken>(logger, BitcoinCommands.WalletLock, ct);
     }
-    
+
+    /// <summary>
+    /// Transparent (t-addr to t-addr) payout through the external wallet daemon, used when the coin
+    /// mines against a wallet-less node (Zebra). The wallet holds the pool address key and exposes a
+    /// Bitcoin-compatible sendmany RPC.
+    /// </summary>
+    private async Task PayoutTransparentAsync(IMiningPool pool, Balance[] balances, CancellationToken ct)
+    {
+        Contract.RequiresNonNull(balances);
+
+        if(walletRpcClient == null)
+        {
+            logger.Error(() => $"[{LogCategory}] Cannot pay out: no wallet daemon (category '{EquihashConstants.WalletDaemonCategory}') is configured");
+            NotifyPayoutFailure(poolConfig.Id, balances, "No wallet daemon configured", null);
+            return;
+        }
+
+        var amounts = balances
+            .Where(x => x.Amount > 0)
+            .ToDictionary(x => x.Address, x => Math.Round(x.Amount, 8));
+
+        if(amounts.Count == 0)
+            return;
+
+        logger.Info(() => $"[{LogCategory}] Paying {FormatAmount(balances.Sum(x => x.Amount))} to {balances.Length} addresses");
+
+        var identifier = !string.IsNullOrEmpty(clusterConfig.PaymentProcessing?.CoinbaseString) ?
+            clusterConfig.PaymentProcessing.CoinbaseString.Trim() : "Miningcore";
+        var comment = $"{identifier} Payment";
+
+        object[] args;
+
+        if(extraPoolPaymentProcessingConfig?.MinersPayTxFees == true)
+        {
+            args = new object[]
+            {
+                string.Empty, // default account
+                amounts, // addresses and associated amounts
+                1, // only spend funds covered by this many confirmations
+                comment, // tx comment
+                amounts.Keys.ToArray(), // distribute transaction fee equally over all recipients
+            };
+        }
+
+        else
+        {
+            args = new object[]
+            {
+                string.Empty, // default account
+                amounts, // addresses and associated amounts
+            };
+        }
+
+        var didUnlockWallet = false;
+
+        // send command
+        tryTransfer:
+        var result = await walletRpcClient.ExecuteAsync<string>(logger, BitcoinCommands.SendMany, ct, args);
+
+        if(result.Error == null)
+        {
+            if(didUnlockWallet)
+            {
+                logger.Info(() => $"[{LogCategory}] Locking wallet");
+                await walletRpcClient.ExecuteAsync<JToken>(logger, BitcoinCommands.WalletLock, ct);
+            }
+
+            var txId = result.Response;
+
+            if(string.IsNullOrEmpty(txId))
+                logger.Error(() => $"[{LogCategory}] {BitcoinCommands.SendMany} did not return a transaction id!");
+            else
+                logger.Info(() => $"[{LogCategory}] Payment transaction id: {txId}");
+
+            await PersistPaymentsAsync(balances, txId);
+
+            NotifyPayoutSuccess(poolConfig.Id, balances, new[] { txId }, null);
+        }
+
+        else
+        {
+            if(result.Error.Code == (int) BitcoinRPCErrorCode.RPC_WALLET_UNLOCK_NEEDED && !didUnlockWallet)
+            {
+                if(!string.IsNullOrEmpty(extraPoolPaymentProcessingConfig?.WalletPassword))
+                {
+                    logger.Info(() => $"[{LogCategory}] Unlocking wallet");
+
+                    var unlockResult = await walletRpcClient.ExecuteAsync<JToken>(logger, BitcoinCommands.WalletPassphrase, ct, new[]
+                    {
+                        extraPoolPaymentProcessingConfig.WalletPassword,
+                        (object) 5 // unlock for N seconds
+                    });
+
+                    if(unlockResult.Error == null)
+                    {
+                        didUnlockWallet = true;
+                        goto tryTransfer;
+                    }
+
+                    else
+                        logger.Error(() => $"[{LogCategory}] {BitcoinCommands.WalletPassphrase} returned error: {unlockResult.Error.Message} code {unlockResult.Error.Code}");
+                }
+
+                else
+                    logger.Error(() => $"[{LogCategory}] Wallet is locked but walletPassword was not configured. Unable to send funds.");
+            }
+
+            else
+            {
+                logger.Error(() => $"[{LogCategory}] {BitcoinCommands.SendMany} returned error: {result.Error.Message} code {result.Error.Code}");
+
+                NotifyPayoutFailure(poolConfig.Id, balances, $"{BitcoinCommands.SendMany} returned error: {result.Error.Message} code {result.Error.Code}", null);
+            }
+        }
+    }
+
     private async Task PayoutZSendManyAsync(IMiningPool pool, Balance[] balances, CancellationToken ct)
     {
         Contract.RequiresNonNull(balances);

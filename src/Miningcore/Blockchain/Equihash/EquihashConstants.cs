@@ -6,6 +6,12 @@ public class EquihashConstants
 {
     public const int TargetPaddingLength = 32;
 
+    /// <summary>
+    /// Daemon category identifying the external transparent wallet used for payouts when mining
+    /// against a wallet-less node (e.g. Zebra).
+    /// </summary>
+    public const string WalletDaemonCategory = "wallet";
+
     public static readonly System.Numerics.BigInteger ZCashDiff1b =
         System.Numerics.BigInteger.Parse("0007ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", NumberStyles.HexNumber);
 }
