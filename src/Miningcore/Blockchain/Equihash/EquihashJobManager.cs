@@ -56,9 +56,13 @@ public class EquihashJobManager : BitcoinJobManagerBase<EquihashJob>
             return result;
 
         // fetch the subsidy for the height being mined (the template height), not the current tip;
-        // otherwise the reward is wrong across halving / funding-stream boundaries
+        // otherwise the reward is wrong across halving / funding-stream boundaries. Only pass the
+        // height for coins known to accept it (node-coinbase / Zcash) so other equihash daemons keep
+        // their previous no-argument behavior.
+        var subsidyArgs = ChainConfig?.UseNodeCoinbaseTx == true ? new object[] { result.Response.Height } : null;
+
         var subsidyResponse = await rpc.ExecuteAsync<ZCashBlockSubsidy>(logger,
-            BitcoinCommands.GetBlockSubsidy, ct, new object[] { result.Response.Height });
+            BitcoinCommands.GetBlockSubsidy, ct, subsidyArgs);
 
         if(subsidyResponse.Error == null)
             result.Response.Subsidy = subsidyResponse.Response;
