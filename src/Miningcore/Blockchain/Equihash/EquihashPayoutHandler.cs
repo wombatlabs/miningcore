@@ -12,9 +12,11 @@ using Miningcore.Mining;
 using Miningcore.Persistence;
 using Miningcore.Persistence.Model;
 using Miningcore.Persistence.Repositories;
+using Miningcore.Rpc;
 using Miningcore.Time;
 using NBitcoin;
 using Newtonsoft.Json.Linq;
+using Block = Miningcore.Persistence.Model.Block;
 using Contract = Miningcore.Contracts.Contract;
 using IBlockRepository = Miningcore.Persistence.Repositories.IBlockRepository;
 
@@ -78,10 +80,104 @@ public class EquihashPayoutHandler : BitcoinPayoutHandler
             logger.Debug(() => $"[{LogCategory}] {EquihashCommands.ZSendMany} 'PrivacyPolicy' support returned error: {responseZSendMany.Error?.Message} code {responseZSendMany.Error?.Code}");
     }
 
+    public override async Task<Block[]> ClassifyBlocksAsync(IMiningPool pool, Block[] blocks, CancellationToken ct)
+    {
+        Contract.RequiresNonNull(poolConfig);
+        Contract.RequiresNonNull(blocks);
+
+        // coins whose coinbase is built by a wallet-less node (Zebra) cannot be classified with the
+        // wallet gettransaction RPC the base handler uses; classify via getrawtransaction instead
+        if(chainConfig?.UseNodeCoinbaseTx != true)
+            return await base.ClassifyBlocksAsync(pool, blocks, ct);
+
+        var coin = poolConfig.Template.As<CoinTemplate>();
+        var pageSize = 100;
+        var pageCount = (int) Math.Ceiling(blocks.Length / (double) pageSize);
+        var result = new List<Block>();
+
+        for(var i = 0; i < pageCount; i++)
+        {
+            var page = blocks
+                .Skip(i * pageSize)
+                .Take(pageSize)
+                .ToArray();
+
+            // block.TransactionConfirmationData holds the coinbase txid; getrawtransaction with
+            // verbosity 1 returns its height and confirmations against the best chain
+            var batch = page.Select(block => new RpcRequest(BitcoinCommands.GetRawTransaction,
+                new object[] { block.TransactionConfirmationData, 1 })).ToArray();
+
+            var results = await rpcClient.ExecuteBatchAsync(logger, ct, batch);
+
+            for(var j = 0; j < results.Length; j++)
+            {
+                var cmdResult = results[j];
+                var block = page[j];
+                var txInfo = cmdResult.Response?.ToObject<ZCashRawTransaction>();
+
+                if(cmdResult.Error != null)
+                {
+                    // -5 ("no such mempool or blockchain transaction") means the coinbase is no longer
+                    // on the best chain -> orphaned. Any other error is treated as transient: the block
+                    // is left untouched and reclassified on the next cycle rather than losing its reward.
+                    if(cmdResult.Error.Code == -5)
+                    {
+                        block.Status = BlockStatus.Orphaned;
+                        block.Reward = 0;
+                        result.Add(block);
+
+                        logger.Info(() => $"[{LogCategory}] Block {block.BlockHeight} classified as orphaned due to daemon error {cmdResult.Error.Code}");
+
+                        messageBus.NotifyBlockUnlocked(poolConfig.Id, block, coin);
+                    }
+
+                    else
+                        logger.Warn(() => $"[{LogCategory}] Daemon reports error '{cmdResult.Error.Message}' (Code {cmdResult.Error.Code}) for transaction {block.TransactionConfirmationData}");
+                }
+
+                // found off the best chain (or reporting no confirmations) -> orphaned
+                else if(txInfo == null || txInfo.Confirmations <= 0)
+                {
+                    block.Status = BlockStatus.Orphaned;
+                    block.Reward = 0;
+                    result.Add(block);
+
+                    logger.Info(() => $"[{LogCategory}] Block {block.BlockHeight} classified as orphaned (confirmations {txInfo?.Confirmations ?? 0})");
+
+                    messageBus.NotifyBlockUnlocked(poolConfig.Id, block, coin);
+                }
+
+                else if(txInfo.Confirmations < minConfirmations)
+                {
+                    // immature - the block reward set at block-discovery time (miner subsidy + fees)
+                    // is what the node coinbase paid, so it is not overwritten here
+                    block.ConfirmationProgress = Math.Min(1.0d, (double) txInfo.Confirmations / minConfirmations);
+                    result.Add(block);
+
+                    messageBus.NotifyBlockConfirmationProgress(poolConfig.Id, block, coin);
+                }
+
+                else
+                {
+                    // matured and spendable
+                    block.Status = BlockStatus.Confirmed;
+                    block.ConfirmationProgress = 1;
+                    result.Add(block);
+
+                    logger.Info(() => $"[{LogCategory}] Unlocked block {block.BlockHeight} worth {FormatAmount(block.Reward)}");
+
+                    messageBus.NotifyBlockUnlocked(poolConfig.Id, block, coin);
+                }
+            }
+        }
+
+        return result.ToArray();
+    }
+
     public override async Task PayoutAsync(IMiningPool pool, Balance[] balances, CancellationToken ct)
     {
         Contract.RequiresNonNull(balances);
-        
+
         // Some projects like Veruscoin does not require shielding before being able to spend coins.
         // They can also sends coins from a t-address to t-addresses and z-addresses
         if(supportsSendCurrency)

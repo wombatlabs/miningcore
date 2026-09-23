@@ -52,7 +52,7 @@ public class BitcoinPayoutHandler : PayoutHandlerBase,
 
     private int payoutDecimalPlaces = 4;
     private CoinTemplate coin;
-    private int minConfirmations;
+    protected int minConfirmations;
 
     protected override string LogCategory => "Bitcoin Payout Handler";
 
