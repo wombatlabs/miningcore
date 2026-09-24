@@ -619,7 +619,14 @@ public class EquihashJob
             throw new StratumException(StratumError.Other, "incorrect size of ntime");
 
         var nTimeInt = uint.Parse(nTime.HexToReverseByteArray().ToHexString(), NumberStyles.HexNumber);
-        if(nTimeInt < BlockTemplate.CurTime || nTimeInt > ((DateTimeOffset) clock.Now).ToUnixTimeSeconds() + 7200)
+
+        // upper bound: the template's maxtime (the consensus limit - Zcash rejects nTime beyond
+        // median-time-past + 90 minutes) when the node provides it, else a 2-hour window
+        var maxTime = BlockTemplate.MaxTime > 0 ?
+            BlockTemplate.MaxTime :
+            (ulong) (((DateTimeOffset) clock.Now).ToUnixTimeSeconds() + 7200);
+
+        if(nTimeInt < BlockTemplate.CurTime || nTimeInt > maxTime)
             throw new StratumException(StratumError.Other, "ntime out of range");
 
         var nonce = context.ExtraNonce1 + extraNonce2;

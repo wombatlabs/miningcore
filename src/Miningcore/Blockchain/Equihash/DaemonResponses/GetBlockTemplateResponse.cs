@@ -46,6 +46,9 @@ public class EquihashBlockTemplate : Bitcoin.DaemonResponses.BlockTemplate
 
     public string LongPollId { get; set; }
     public ulong MinTime { get; set; }
+
+    [JsonProperty("maxtime")]
+    public ulong MaxTime { get; set; }
     public ulong SigOpLimit { get; set; }
     public ulong SizeLimit { get; set; }
     public string[] Mutable { get; set; }
